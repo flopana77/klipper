@@ -7,7 +7,10 @@
 class FirmwareRetraction:
     def __init__(self, config):
         # Get a reference to the printer object from the config
-        self.printer = config.get_printer()
+        self.printer = printer = config.get_printer()
+        
+        # Get a reference to the gcode object
+        self.gcode = printer.lookup_object('gcode')
         
         # Initialize various retraction-related parameters from the config
         self.retract_length = config.getfloat('retract_length', 0., minval=0.)
@@ -96,8 +99,9 @@ class FirmwareRetraction:
                 ################################################################################################# Added back z-hop
                 % (self.retract_length, self.retract_speed*60, self.z_hop))
             
-            # Set the flag to indicate that the filament is retracted
+            # Set the flag to indicate that the filament is retracted and activate G1 method with z-hop compensation
             self.is_retracted = True
+            self.unregister_G1
 
     # GCode Command G11 to perform filament unretraction
     def cmd_G11(self, gcmd):
@@ -116,9 +120,56 @@ class FirmwareRetraction:
                 ################################################################################################# Added back un z-hop
                 % (self.unretract_length, self.unretract_speed*60, self.z_hop))
             
-            # Set the flag to indicate that the filament is not retracted
+            # Set the flag to indicate that the filament is not retracted and activate original G1 method 
             self.is_retracted = False
-            
+            self.re_register_G1
+    
+    ##########################################################################################  Registrer new G1 command handler
+    def unregister_G1(self):
+        # Unregister the original G1 method from the G1 command and
+        # store the associated method in prev_cmd
+        prev_cmd = self.gcode.register_command("G1", None)
+
+        # Now, register the original G1 method with the new G1.20140114 command,
+        # and set its description to indicate it's a renamed built-in command
+        pdesc = "Renamed builtin of '%s'" % ("G1")
+        self.gcode.register_command('G1.20140114', prev_cmd, desc=pdesc)
+        # Register the G0 and the G1 commands with the z-hop G1 method
+        self.gcode.register_command('G0', self.cmd_G1_zhop)
+        cmd_desc = "G1 command that accounts for z hop when retracted"
+        self.gcode.register_command('G1', self.cmd_G1_zhop, desc=cmd_desc)
+    
+    ##########################################################################################  Re-registrer old G1 command handler
+    def re_register_G1(self):
+        # Unregister the original G1 method from the G1.20140114 command and
+        # store the associated method in prev_cmd
+        prev_cmd = self.gcode.register_command("G1.20140114", None)
+
+        # Now, register the original G1 method with the old G1 command,
+        # and set empty description
+        self.gcode.register_command("G1", prev_cmd, desc=None)
+        
+        # Re-register the G0 command with the original G1 method
+        self.gcode.register_command('G0', self.gcode_move.cmd_G1)
+
+    
+    ######################################################################################### G1 method that accounts for z-hop by altering the z-coordinates
+    def cmd_G1_zhop(self,gcmd):
+        params = gcmd.get_command_parameters()
+        
+        # Check if there's a Z movement in the command
+        if 'Z' in params:
+            # Adjust the Z value to account for the Z-hop offset
+            params['Z'] = str(float(params['Z']) + self.z_hop)
+
+            # Reconstruct the G1 command with adjusted parameters
+            new_g1_command = "G1.20140114"
+            for key, value in params.items():
+                new_g1_command += f" {key}{value}"
+
+            # Run the G1.20140114 command with the adjusted parameters
+            self.gcode.run_script_from_command(new_g1_command)
+    
 # Function to load the FirmwareRetraction class from the configuration file
 def load_config(config):
     return FirmwareRetraction(config)
