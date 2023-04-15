@@ -42,7 +42,10 @@ class FirmwareRetraction:
             "unretract_speed": self.unretract_speed,
             
             ################################################################################################################ Added back z_hop
-            "z_hop": self.z_hop
+            "z_hop": self.z_hop,
+            ################################################################################################################ Add unretract_length and is_retracted to status output
+            "retract_length": self.unretract_length,
+            "retract_state": self.is_retracted
         }
     
     # Help message for SET_RETRACTION command, obtained by issuing HELP command
