@@ -136,7 +136,7 @@ class FirmwareRetraction:
         # Now, register the original G1 method with the new G1.20140114 command,
         # and set its description to indicate it's a renamed built-in command
         pdesc = "Renamed builtin of '%s'" % ("G1")
-        self.gcode.register_command('G1.20140114', prev_cmd, desc=pdesc)
+        self.gcode.register_command('G1.1', prev_cmd, desc=pdesc)
         # Register the G0 and the G1 commands with the z-hop G1 method
         self.gcode.register_command('G0', self.cmd_G1_zhop)
         cmd_desc = "G1 command that accounts for z hop when retracted"
@@ -146,7 +146,7 @@ class FirmwareRetraction:
     def re_register_G1(self):
         # Unregister the original G1 method from the G1.20140114 command and
         # store the associated method in prev_cmd
-        prev_cmd = self.gcode.register_command("G1.20140114", None)
+        prev_cmd = self.gcode.register_command("G1.1", None)
 
         # Now, register the original G1 method with the old G1 command,
         # and set empty description
@@ -166,7 +166,7 @@ class FirmwareRetraction:
             params['Z'] = str(float(params['Z']) + self.z_hop)
 
             # Reconstruct the G1 command with adjusted parameters
-            new_g1_command = "G1.20140114"
+            new_g1_command = "G1.1"
             for key, value in params.items():
                 new_g1_command += f" {key}{value}"
 
