@@ -155,11 +155,9 @@ class FirmwareRetraction:
             self.gcode.run_script_from_command(
                 'SAVE_GCODE_STATE NAME=_retract_state\n'
                 'G91\n'
-
+                'G1 E%.5f F%d\n'
                 ################################################################################################# Added back un z-hop
                 'G1 Z-%.5f\n'
-                
-                'G1 E%.5f F%d\n'
                 'RESTORE_GCODE_STATE NAME=_retract_state'
                 
                 ################################################################################################# Added back un z-hop
