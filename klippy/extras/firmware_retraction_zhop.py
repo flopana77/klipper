@@ -106,7 +106,6 @@ class FirmwareRetraction:
             
             # Set the flag to indicate that the filament is retracted and activate G1 method with z-hop compensation
             self.is_retracted = True
-            logging.debug("cmd_G10: Calling self.unregister_G1 method")
             self.unregister_G1()
 
     # GCode Command G11 to perform filament unretraction
@@ -128,7 +127,6 @@ class FirmwareRetraction:
             
             # Set the flag to indicate that the filament is not retracted and activate original G1 method 
             self.is_retracted = False
-            logging.debug("cmd_G11: Calling self.re_register_G1 method")
             self.re_register_G1()
     
     ##########################################################################################  Registrer new G1 command handler
@@ -137,46 +135,36 @@ class FirmwareRetraction:
         # store the associated method in prev_cmd_G1 andprev_cmd_G0
         prev_cmd_G1 = self.gcode.register_command("G1", None)
         prev_cmd_G0 = self.gcode.register_command("G0", None)
-        logging.debug("unregister_G1: Previous G1 command registred")
 
         # Now, register the original G1 method with the new G1.20140114 and G0.20140114 commands,
         # and set their descriptions to indicate they are renamed built-in commands
         pdesc_G1 = "Renamed builtin of '%s'" % ("G1")
-        self.gcode.register_command('G1.20140114', prev_cmd_G1, desc=pdesc_G1)
-        logging.debug("unregister_G1: Original G1 method re-registred to G1.20140114")
         pdesc_G0 = "Renamed builtin of '%s'" % ("G0")
+        self.gcode.register_command('G1.20140114', prev_cmd_G1, desc=pdesc_G1)
         self.gcode.register_command('G0.20140114', prev_cmd_G0, desc=pdesc_G0)
-        logging.debug("unregister_G1: Original G1 method re-registred to G0.20140114")
         
         # Register the G0 and the G1 commands with the z-hop G1 method
         cmd_desc_G1 = "G1 command that accounts for z hop when retracted"
-        self.gcode.register_command('G1', self.cmd_G1_zhop, desc=cmd_desc_G1)
-        logging.debug("unregister_G1: New G1 method registred to G1")
         cmd_desc_G0 = "G0 command that accounts for z hop when retracted"
+        self.gcode.register_command('G1', self.cmd_G1_zhop, desc=cmd_desc_G1)
         self.gcode.register_command('G0', self.cmd_G1_zhop, desc=cmd_desc_G0)
-        logging.debug("unregister_G1: New G1 method registred to G0")
-        
+
     ##########################################################################################  Re-registrer old G1 command handler
     def re_register_G1(self):
         # Unregister the original G1 method from the G1.20140114 command and
         # store the associated method in prev_cmd
-        prev_cmd = self.gcode.register_command("G1.1", None)
-        logging.debug("re_register_G1: Previous G1 command registred")
+        prev_cmd_G1 = self.gcode.register_command("G1.20140114", None)
+        prev_cmd_G0 = self.gcode.register_command("G0.20140114", None)
 
-        # Now, register the original G1 method with the old G1 command,
+        # Now, register the original G1 method with the old G1 and G0 command,
         # and set empty description
-        self.gcode.register_command("G1", prev_cmd, desc=None)
-        logging.debug("re_register_G1: Register original G1 method to G1 command")
-        
-        # Re-register the G0 command with the original G1 method
-        self.gcode.register_command('G0', self.gcode_move.cmd_G1)
-        logging.debug("re_register_G1: Register original G1 method to G0 command")
+        self.gcode.register_command("G1", prev_cmd_G1, desc=None)
+        self.gcode.register_command("G0", prev_cmd_G0, desc=None)
 
     
     ######################################################################################### G1 method that accounts for z-hop by altering the z-coordinates
     def cmd_G1_zhop(self,gcmd):
         params = gcmd.get_command_parameters()
-        logging.debug("cmd_G1_zhop: Params received")
         
         # Check if there's a Z movement in the command
         if 'Z' in params:
