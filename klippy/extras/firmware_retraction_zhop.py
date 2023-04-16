@@ -34,7 +34,7 @@ class FirmwareRetraction:
         ############################################################################################################### Check that z_hop_style was input and is valid.
         if self.z_hop_style not in self.valid_z_hop_styles:
             self.z_hop_style = 'linear'
-            self.gcode.respond_info('The provided z_hop_style value is invalid. Using "linear" as default value.')
+            printer.config_error('The provided z_hop_style value is invalid. Using "linear" or "helix".')
         
         # Initialize unretract length and retracted state
         self.unretract_length = (self.retract_length + self.unretract_extra_length)
