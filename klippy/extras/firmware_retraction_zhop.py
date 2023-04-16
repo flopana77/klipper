@@ -118,7 +118,7 @@ class FirmwareRetraction:
                 # Get current position
                 gcodestatus = self.gcode_move.get_status()
                 currentPos = gcodestatus['gcode_position']
-                self.currentZ = gcmd.getfloat(currentPos[2])
+                self.currentZ = currentPos[2]
                 self.z_hop_Z = self.currentZ + self.z_hop_height
                 
                 retract_gcode += (
