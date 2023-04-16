@@ -178,13 +178,13 @@ class FirmwareRetraction:
             # Adjust the Z value to account for the Z-hop offset
             params['Z'] = str(float(params['Z']) + self.z_hop)
 
-            # Reconstruct the G1 command with adjusted parameters
-            new_g1_command = "G1.20140114"
-            for key, value in params.items():
-                new_g1_command += f" {key}{value}"
+        # Reconstruct the G1 command with adjusted parameters
+        new_g1_command = "G1.20140114"
+        for key, value in params.items():
+            new_g1_command += f" {key}{value}"
 
-            # Run the G1.20140114 command with the adjusted parameters
-            self.gcode.run_script_from_command(new_g1_command)
+        # Run the G1.20140114 command with the adjusted parameters
+        self.gcode.run_script_from_command(new_g1_command)
     
 # Function to load the FirmwareRetraction class from the configuration file
 def load_config(config):
