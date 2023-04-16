@@ -75,16 +75,20 @@ class FirmwareRetraction:
     
     # Command to set the firmware retraction parameters
     def cmd_SET_RETRACTION(self, gcmd):
-        self.retract_length = gcmd.get_float('RETRACT_LENGTH', self.retract_length, minval=0.)
-        self.retract_speed = gcmd.get_float('RETRACT_SPEED', self.retract_speed, minval=1)
-        self.unretract_extra_length = gcmd.get_float('UNRETRACT_EXTRA_LENGTH', self.unretract_extra_length, minval=0.)
-        self.unretract_speed = gcmd.get_float('UNRETRACT_SPEED', self.unretract_speed, minval=1)
-        
-        ################################################################################################################ Added back z_hop_height with 2mm minimum CHANGE LATER
-        self.z_hop_height = gcmd.get_float('Z_HOP_HEIGHT', self.z_hop_height, minval=0.)
-        
-        self.unretract_length = (self.retract_length + self.unretract_extra_length)
-        self.is_retracted = False
+        # SET_RETRACTION can only be executed when unretracted to prevent error and nozzle crashing
+        if not self.is_retracted:
+            self.retract_length = gcmd.get_float('RETRACT_LENGTH', self.retract_length, minval=0.)
+            self.retract_speed = gcmd.get_float('RETRACT_SPEED', self.retract_speed, minval=1)
+            self.unretract_extra_length = gcmd.get_float('UNRETRACT_EXTRA_LENGTH', self.unretract_extra_length, minval=0.)
+            self.unretract_speed = gcmd.get_float('UNRETRACT_SPEED', self.unretract_speed, minval=1)
+            
+            ################################################################################################################ Added back z_hop_height with 2mm minimum CHANGE LATER
+            self.z_hop_height = gcmd.get_float('Z_HOP_HEIGHT', self.z_hop_height, minval=0.)
+            
+            self.unretract_length = (self.retract_length + self.unretract_extra_length)
+            self.is_retracted = False
+        else:
+            gcmd.respond_info('Printer in retract state. SET_RETRACTION can only be executed while unretracted!')
     
     # Help message for GET_RETRACTION command
     cmd_GET_RETRACTION_help = ('Report firmware retraction paramters')
