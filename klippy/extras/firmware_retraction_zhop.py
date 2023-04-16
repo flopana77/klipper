@@ -112,6 +112,9 @@ class FirmwareRetraction:
     def cmd_G11(self, gcmd):
         # If the filament is currently retracted
         if self.is_retracted:
+            # Restore original handlers
+            self.re_register_G1()
+            
             # Use the G-code script to save the current state, move the filament, and restore the state
             self.gcode.run_script_from_command(
                 "SAVE_GCODE_STATE NAME=_retract_state\n"
@@ -127,7 +130,6 @@ class FirmwareRetraction:
             
             # Set the flag to indicate that the filament is not retracted and activate original G1 method 
             self.is_retracted = False
-            self.re_register_G1()
     
     ##########################################################################################  Registrer new G1 command handler
     def unregister_G1(self):
@@ -172,7 +174,7 @@ class FirmwareRetraction:
             params['Z'] = str(float(params['Z']) + self.z_hop)
 
             # Reconstruct the G1 command with adjusted parameters
-            new_g1_command = "G1.1"
+            new_g1_command = "G1.20140114"
             for key, value in params.items():
                 new_g1_command += f" {key}{value}"
 
