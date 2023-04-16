@@ -34,6 +34,7 @@ class FirmwareRetraction:
         ############################################################################################################### Check that z_hop_style was input and is valid.
         if self.z_hop_style not in self.valid_z_hop_styles:
             self.z_hop_style = 'linear'
+            logging.warning('The provided z_hop_style value is invalid. Using "linear" as default value.')
         
         # Initialize unretract length and retracted state
         self.unretract_length = (self.retract_length + self.unretract_extra_length)
