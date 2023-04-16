@@ -153,10 +153,15 @@ class FirmwareRetraction:
 
     ##########################################################################################  Re-registrer old G1 command handler
     def re_register_G1(self):
-        # Unregister the original G1 method from the G1.20140114 command and
+        # Unregister the original G1 method from the G1.20140114 and G0.20140114 commands and
         # store the associated method in prev_cmd
         prev_cmd_G1 = self.gcode.register_command("G1.20140114", None)
         prev_cmd_G0 = self.gcode.register_command("G0.20140114", None)
+
+        # Unregister the G1 z-hop method from the G1 and G0 commands and
+        # store the associated method in prev_cmd
+        self.gcode.register_command("G1", None)
+        self.gcode.register_command("G0", None)
 
         # Now, register the original G1 method with the old G1 and G0 command,
         # and set empty description
