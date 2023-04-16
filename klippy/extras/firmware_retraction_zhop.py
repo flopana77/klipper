@@ -90,6 +90,17 @@ class FirmwareRetraction:
         else:
             gcmd.respond_info('Printer in retract state. SET_RETRACTION can only be executed while unretracted!')
     
+    
+    # Next steps:
+    # 1) add listening to virtual_sdcard:reset_file and clear any retraction if this event happens
+    # 2) make z_hop depending on virtual sd card being installed
+    # 3) prevent g10 to execute if not homed or if extruder temp not high enough
+    # 4) add extruder-stepper parallel moving with retract speed for a shorther move with full speed after retract is done
+    # 5) bonus, if possible, add ramp for z_hop
+    # 6) test, test, test and check if quality and/or speed are improved to justofy a merge   
+    
+    
+    
     # Help message for GET_RETRACTION command
     cmd_GET_RETRACTION_help = ('Report firmware retraction paramters')
     
@@ -140,9 +151,7 @@ class FirmwareRetraction:
                 ).format(self.z_hop_height)
             else:
                 # z_hop disabled, no move except extruder
-                retract_gcode += (
-                    "RESTORE_GCODE_STATE NAME=_retract_state"
-                )
+                retract_gcode += "RESTORE_GCODE_STATE NAME=_retract_state"
                             
             # Use the G-code script to save the current state, move the filament, and restore the state
             self.gcode.run_script_from_command(retract_gcode)
