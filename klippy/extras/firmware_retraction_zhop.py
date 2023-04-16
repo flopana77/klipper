@@ -118,8 +118,8 @@ class FirmwareRetraction:
             ).format(self.retract_length, int(self.retract_speed * 60))
 
             # Include move command depending on z_hop_style
-            if self.z_hop_style == 'helix':
-                # Get current position
+            if self.z_hop_style == 'helix' and self.z_hop_height > 0.0:
+                # Get current position for helix move with z_hop enabled
                 gcodestatus = self.gcode_move.get_status()
                 currentPos = gcodestatus['gcode_position']
                 self.currentZ = currentPos[2]
@@ -131,11 +131,18 @@ class FirmwareRetraction:
                     "G2 Z{:.5f} I-5 J0\n"
                     "RESTORE_GCODE_STATE NAME=_retract_state"
                 ).format(self.z_hop_Z)
-            else:
+            
+            # Vertical move with enabled z_hop_height
+            elif self.z_hop_style == 'linear' and self.z_hop_height > 0.0:
                 retract_gcode += (
                     "G1 Z{:.5f}\n"
                     "RESTORE_GCODE_STATE NAME=_retract_state"
                 ).format(self.z_hop_height)
+            else:
+                # z_hop disabled, no move except extruder
+                retract_gcode += (
+                    "RESTORE_GCODE_STATE NAME=_retract_state"
+                )
                             
             # Use the G-code script to save the current state, move the filament, and restore the state
             self.gcode.run_script_from_command(retract_gcode)
@@ -154,18 +161,26 @@ class FirmwareRetraction:
             # Restore original G1 handlers if z_hop enabled (z_hop_height greater 0)
             if self.z_hop_height > 0.0:
                 self.re_register_G1()
+
+            # Build the G-Code string to unretract
+            unretract_gcode = (
+                "SAVE_GCODE_STATE NAME=_unretract_state\n"
+                "G91\n"
+                "G1 E{:.5f} F{}\n"
+            ).format(self.unretract_length, int(self.unretract_speed * 60))
             
+            # Include move command only if z_hop enabled
+            if self.z_hop_height > 0.0:
+                unretract_gcode += (
+                    "G1 Z-{:.5f}\n"
+                    "RESTORE_GCODE_STATE NAME=_unretract_state"
+                ).format(self.z_hop_height)
+            else:
+                # z_hop disabled, no move except extruder
+                unretract_gcode += "RESTORE_GCODE_STATE NAME=_unretract_state"
+                            
             # Use the G-code script to save the current state, move the filament, and restore the state
-            self.gcode.run_script_from_command(
-                'SAVE_GCODE_STATE NAME=_retract_state\n'
-                'G91\n'
-                'G1 E%.5f F%d\n'
-                ################################################################################################# Added back un z-hop
-                'G1 Z-%.5f\n'
-                'RESTORE_GCODE_STATE NAME=_retract_state'
-                
-                ################################################################################################# Added back un z-hop
-                % (self.unretract_length, self.unretract_speed*60, self.z_hop_height))
+            self.gcode.run_script_from_command(unretract_gcode)
             
             # Set the flag to indicate that the filament is not retracted and activate original G1 method 
             self.is_retracted = False
