@@ -117,7 +117,7 @@ class FirmwareRetraction:
             if self.z_hop_style == 'helix':
                 retract_gcode += (
                     "G17"
-                    "G2 Z{:.5f}\n I-5 J0"
+                    "G2 Z{:.5f} I-5 J0\n"
                     "RESTORE_GCODE_STATE NAME=_retract_state"
                 ).format(self.z_hop_height)
             else:
