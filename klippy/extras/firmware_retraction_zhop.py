@@ -128,7 +128,7 @@ class FirmwareRetraction:
                 retract_gcode += (
                     "G90\n" # Switch back to absolute mode given that arc commands don't support relative mode
                     "G17\n"
-                    "G2 Z{:.5f} I-5 J0\n"
+                    "G2 Z{:.5f} I-1.22 J0\n"
                     "RESTORE_GCODE_STATE NAME=_retract_state"
                 ).format(self.z_hop_Z)
             
