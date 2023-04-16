@@ -23,7 +23,8 @@ class FirmwareRetraction:
         self.unretract_extra_length = config.getfloat('unretract_extra_length', 0., minval=0.)
         self.unretract_speed = config.getfloat('unretract_speed', 10., minval=1)
         
-        ############################################################################################################### Added z_hop with 2mm minimum...change later to 0.
+        ############################################################################################################### Added z_hop with 0mm minimum...
+        ############################################################################################################### Standard value is cero to prevent any incompatibility issues on merge
         self.z_hop = config.getfloat('z_hop', 0., minval=0.)
         
         # Initialize unretract length and retracted state
@@ -40,6 +41,9 @@ class FirmwareRetraction:
         # Register new G-code commands for firmware retraction/unretraction
         self.gcode.register_command('G10', self.cmd_G10)
         self.gcode.register_command('G11', self.cmd_G11)
+        ############################################################################################################# Add M103 and M101 aliases for G10 and G11
+        self.gcode.register_command('M103', self.cmd_G10)
+        self.gcode.register_command('M101', self.cmd_G11)      
     
     # Helper method to return the current retraction parameters
     def get_status(self, eventtime):
@@ -119,10 +123,11 @@ class FirmwareRetraction:
             self.gcode.run_script_from_command(
                 "SAVE_GCODE_STATE NAME=_retract_state\n"
                 "G91\n"
-                "G1 E%.5f F%d\n"
-                
+
                 ################################################################################################# Added back un z-hop
                 "G1 Z-%.5f\n"
+                
+                "G1 E%.5f F%d\n"
                 "RESTORE_GCODE_STATE NAME=_retract_state"
                 
                 ################################################################################################# Added back un z-hop
@@ -170,6 +175,7 @@ class FirmwareRetraction:
 
     
     ######################################################################################### G1 method that accounts for z-hop by altering the z-coordinates
+    ######################################################################################### Offsets are not touched to prevent incompatibility issues
     def cmd_G1_zhop(self,gcmd):
         params = gcmd.get_command_parameters()
         
