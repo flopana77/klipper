@@ -28,13 +28,11 @@ class FirmwareRetraction:
         self.z_hop_height = config.getfloat('z_hop_height', 0., minval=0.)
         
         ############################################################################################################### Added z_hop_style to config, "Linear" or "Helix" for Bambu Lab style zhop. format all lower case and define valid inputs.
-        self.z_hop_style = config.get('z_hop_style').strip().lower()
+        self.z_hop_style = config.get('z_hop_style', default='linear').strip().lower()
         self.valid_z_hop_styles = ['linear','helix']
         
         ############################################################################################################### Check that z_hop_style was input and is valid.
-        if self.z_hop_style is None:
-            self.z_hop_style = 'linear'
-        elif self.z_hop_style not in self.valid_z_hop_styles:
+        if self.z_hop_style not in self.valid_z_hop_styles:
             self.z_hop_style = 'linear'
         
         # Initialize unretract length and retracted state
