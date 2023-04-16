@@ -67,7 +67,7 @@ class FirmwareRetraction:
         self.unretract_speed = gcmd.get_float('UNRETRACT_SPEED', self.unretract_speed, minval=1)
         
         ################################################################################################################ Added back z_hop with 2mm minimum CHANGE LATER
-        self.z_hop = self.gcode.get_float('Z_HOP', self.z_hop, minval=0.)
+        self.z_hop = gcmd.get_float('Z_HOP', self.z_hop, minval=0.)
         
         self.unretract_length = (self.retract_length + self.unretract_extra_length)
         self.is_retracted = False
@@ -81,7 +81,7 @@ class FirmwareRetraction:
                           "UNRETRACT_EXTRA_LENGTH=%.5f UNRETRACT_SPEED=%.5f"
                           
                           ################################################################################################# Added back z-hop
-                          "Z_HOP=%.5f"
+                          " Z_HOP=%.5f"
                           % (self.retract_length, self.retract_speed,
                              self.unretract_extra_length, self.unretract_speed,
                              ################################################################################################# Added back z-hop
