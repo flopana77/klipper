@@ -142,14 +142,18 @@ class FirmwareRetraction:
             
             # Set the flag to indicate that the filament is retracted and activate G1 method with z-hop compensation
             self.is_retracted = True
-            self.unregister_G1()
+            
+            # Swap original G1 handlers if z_hop enabled (z_hop_height greater 0)
+            if self.z_hop_height > 0.0:
+                self.unregister_G1()
 
     # GCode Command G11 to perform filament unretraction
     def cmd_G11(self, gcmd):
         # If the filament is currently retracted
         if self.is_retracted:
-            # Restore original handlers
-            self.re_register_G1()
+            # Restore original G1 handlers if z_hop enabled (z_hop_height greater 0)
+            if self.z_hop_height > 0.0:
+                self.re_register_G1()
             
             # Use the G-code script to save the current state, move the filament, and restore the state
             self.gcode.run_script_from_command(
