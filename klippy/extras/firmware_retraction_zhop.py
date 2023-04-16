@@ -133,25 +133,29 @@ class FirmwareRetraction:
     
     ##########################################################################################  Registrer new G1 command handler
     def unregister_G1(self):
-        # Unregister the original G1 method from the G1 command and
-        # store the associated method in prev_cmd
-        prev_cmd = self.gcode.register_command("G1", None)
+        # Unregister the original G1 method from the G1 and G0 command and
+        # store the associated method in prev_cmd_G1 andprev_cmd_G0
+        prev_cmd_G1 = self.gcode.register_command("G1", None)
+        prev_cmd_G0 = self.gcode.register_command("G0", None)
         logging.debug("unregister_G1: Previous G1 command registred")
 
-        # Now, register the original G1 method with the new G1.20140114 command,
-        # and set its description to indicate it's a renamed built-in command
-        pdesc = "Renamed builtin of '%s'" % ("G1")
-        self.gcode.register_command('G1.1', prev_cmd, desc=pdesc)
+        # Now, register the original G1 method with the new G1.20140114 and G0.20140114 commands,
+        # and set their descriptions to indicate they are renamed built-in commands
+        pdesc_G1 = "Renamed builtin of '%s'" % ("G1")
+        self.gcode.register_command('G1.20140114', prev_cmd_G1, desc=pdesc_G1)
         logging.debug("unregister_G1: Original G1 method re-registred to G1.20140114")
+        pdesc_G0 = "Renamed builtin of '%s'" % ("G0")
+        self.gcode.register_command('G0.20140114', prev_cmd_G0, desc=pdesc_G0)
+        logging.debug("unregister_G1: Original G1 method re-registred to G0.20140114")
         
         # Register the G0 and the G1 commands with the z-hop G1 method
-        self.gcode.register_command('G0', self.cmd_G1_zhop)
+        cmd_desc_G1 = "G1 command that accounts for z hop when retracted"
+        self.gcode.register_command('G1', self.cmd_G1_zhop, desc=cmd_desc_G1)
+        logging.debug("unregister_G1: New G1 method registred to G1")
+        cmd_desc_G0 = "G0 command that accounts for z hop when retracted"
+        self.gcode.register_command('G0', self.cmd_G1_zhop, desc=cmd_desc_G0)
         logging.debug("unregister_G1: New G1 method registred to G0")
         
-        cmd_desc = "G1 command that accounts for z hop when retracted"
-        self.gcode.register_command('G1', self.cmd_G1_zhop, desc=cmd_desc)
-        logging.debug("unregister_G1: New G1 method registred to G1")
-    
     ##########################################################################################  Re-registrer old G1 command handler
     def re_register_G1(self):
         # Unregister the original G1 method from the G1.20140114 command and
