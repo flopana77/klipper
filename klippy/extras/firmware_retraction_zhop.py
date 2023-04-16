@@ -116,7 +116,8 @@ class FirmwareRetraction:
             # Include move command depending on z_hop_style
             if self.z_hop_style == 'helix':
                 retract_gcode += (
-                    "G1 Z{:.5f}\n"
+                    "G17"
+                    "G2 Z{:.5f}\n I-5 J0"
                     "RESTORE_GCODE_STATE NAME=_retract_state"
                 ).format(self.z_hop_height)
             else:
@@ -127,18 +128,6 @@ class FirmwareRetraction:
                             
             # Use the G-code script to save the current state, move the filament, and restore the state
             self.gcode.run_script_from_command(retract_gcode)
-            
-            #self.gcode.run_script_from_command(
-            #    'SAVE_GCODE_STATE NAME=_retract_state\n'
-            #    'G91\n'
-            #    'G1 E-%.5f F%d\n'
-            #    
-            #    ################################################################################################# Added back z-hop
-            #    'G1 Z%.5f\n'
-            #    'RESTORE_GCODE_STATE NAME=_retract_state'
-            #    
-            #    ################################################################################################# Added back z-hop
-            #    % (self.retract_length, self.retract_speed*60, self.z_hop_height))
             
             # Set the flag to indicate that the filament is retracted and activate G1 method with z-hop compensation
             self.is_retracted = True
