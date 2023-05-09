@@ -1,0 +1,19 @@
+Firmware retraction
+
+    # Next steps:
+    # 9) total zhop styles: standard, ramp, helix
+    # 6) ramp z_hop: to do this, just don't execute vertical move but do command redefinition...
+
+    # 1) add listening to virtual_sdcard:reset_file or polling change to printing or from printing and clear any retraction if this event happens
+    # 2) make z_hop depending on virtual sd card being installed
+    # 3) prevent g10 to execute if not homed or if extruder temp not high enough
+    # 4) add extruder-stepper parallel moving with retract speed for a shorther move with full speed after retract is done
+    # 5) get last move to calculate angle and figure out the perpendicularly located helix axis...to ensure that the helix always go 90deg away...
+    # 7) Check Marlin Auto-retract to exchange slicer retraction by firmware retraction on old files
+    # 8) test, test, test and check if quality and/or speed are improved to justify a merge --> E3D Overhang egg
+    
+    # Check video of firmware retract: https://youtu.be/T4N59u4wm-Y (saying klipper doesnt support zhop as negative...good argument for a merge)
+    # Check video on speed improvement of diagonal retract vs. vertical. ideally, helix takes away all stringing at no time lost
+    # https://youtu.be/OAXi_apvgl4
+
+    Failure modes:
