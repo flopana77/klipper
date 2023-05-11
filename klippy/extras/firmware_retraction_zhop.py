@@ -179,15 +179,15 @@ class FirmwareRetraction:
             ).format(self.unretract_length, int(self.unretract_speed * 60))
             
             # Include move command only if z_hop enabled
-            if self.z_hop_height > 0.0:
+            if self.z_hop_height <= 0.0 or self.ramp_move:
+                # z_hop disabled or ramp move not executed, no move except extruder
+                unretract_gcode += "RESTORE_GCODE_STATE NAME=_unretract_state"
+            else:          
                 unretract_gcode += (
                     "G1 Z-{:.5f}\n"
                     "RESTORE_GCODE_STATE NAME=_unretract_state"
                 ).format(self.z_hop_height)
-            else:
-                # z_hop disabled, no move except extruder
-                unretract_gcode += "RESTORE_GCODE_STATE NAME=_unretract_state"
-                            
+                       
             # Use the G-code script to save the current state, move the filament, and restore the state
             self.gcode.run_script_from_command(unretract_gcode)
             
