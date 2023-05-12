@@ -104,7 +104,7 @@ class FirmwareRetraction:
                              ################################################################################################# Added back z-hop
                              self.z_hop_height, self.z_hop_style))
     
-    # Gcode Command G10 to perform firmware retraction
+    ##########################################################################################  Gcode Command G10 to perform firmware retraction
     def cmd_G10(self, gcmd):
         # If the filament isn't already retracted
         if not self.is_retracted:
@@ -162,7 +162,7 @@ class FirmwareRetraction:
             if self.z_hop_height > 0.0:
                 self.unregister_G1()
 
-    # GCode Command G11 to perform filament unretraction
+    ##########################################################################################  GCode Command G11 to perform filament unretraction
     def cmd_G11(self, gcmd):
         # If the filament is currently retracted
         if self.is_retracted:
@@ -193,106 +193,69 @@ class FirmwareRetraction:
             # Set the flag to indicate that the filament is not retracted and activate original G1 method 
             self.is_retracted = False
     
-    def _toggle_gcode_commands(self, new_cmd_name, old_cmd_name, new_cmd_func, new_cmd_desc, toggle_state):
-        prev_cmd = self.gcode.register_command(old_cmd_name, None)
-        pdesc = 'Renamed builtin of "%s"' % old_cmd_name
-        if not toggle_state:
-            self.gcode.register_command(new_cmd_name, prev_cmd, desc=pdesc)
-            self.gcode.register_command(old_cmd_name, new_cmd_func, desc=new_cmd_desc)
-        else:
-            self.gcode.register_command(new_cmd_name, new_cmd_func)
-            self.gcode.register_command(new_cmd_name, prev_cmd, desc=new_cmd_desc)
-            
-
-    def re_register_G1(self):
-        self._toggle_gcode_commands('G1', 'G1.20140114', None, 'cmd_G1_help', True)
-        self._toggle_gcode_commands('G0', 'G0.20140114', None, 'cmd_G1_help', True)
-        
-#    ##########################################################################################  Re-registrer old G1 command handler
-#    def re_register_G1(self):
-#        # Unregister the original G1 method from the G1.20140114 and G0.20140114 commands and
-#        # store the associated method in prev_cmd
-#        prev_cmd_G1 = self.gcode.register_command('G1.20140114', None)#
-#        prev_cmd_G0 = self.gcode.register_command('G0.20140114', None)
-#
-#        # Unregister the G1 z-hop method from the G1 and G0 commands and
-#        # store the associated method in prev_cmd
-#        self.gcode.register_command('G1', None)
-#        self.gcode.register_command('G0', None)
-#
-#        # Now, register the original G1 method with the old G1 and G0 command,
-#        # and set empty description
-#        self.gcode.register_command('G1', prev_cmd_G1, desc=None)
-#        self.gcode.register_command('G0', prev_cmd_G0, desc=None)
-#
-    
+    ##########################################################################################  Register new G1 command handler    
     def unregister_G1(self):
         self._toggle_gcode_commands('G1.20140114', 'G1', self.cmd_G1_zhop, 'G1 command that accounts for z hop when retracted', False)
         self._toggle_gcode_commands('G0.20140114', 'G0', self.cmd_G1_zhop, 'G0 command that accounts for z hop when retracted', False)
-
-#    ##########################################################################################  Registrer new G1 command handler
-#    def unregister_G1(self):
-#        # Unregister the original G1 method from the G1 and G0 command and
-#        # store the associated method in prev_cmd_G1 and prev_cmd_G0
-#        prev_cmd_G1 = self.gcode.register_command('G1', None)
-#        prev_cmd_G0 = self.gcode.register_command('G0', None)
-#
-#        # Now, register the original G1 method with the new G1.20140114 and G0.20140114 commands,
-#        # and set their descriptions to indicate they are renamed built-in commands
-#        pdesc_G1 = 'Renamed builtin of "%s"' % ('G1')
-#        pdesc_G0 = 'Renamed builtin of "%s"' % ('G0')
-#        self.gcode.register_command('G1.20140114', prev_cmd_G1, desc=pdesc_G1)
-#        self.gcode.register_command('G0.20140114', prev_cmd_G0, desc=pdesc_G0)
-#        
-#        # Register the G0 and the G1 commands with the z-hop G1 method
-#        cmd_desc_G1 = 'G1 command that accounts for z hop when retracted'
-#        cmd_desc_G0 = 'G0 command that accounts for z hop when retracted'
-#        self.gcode.register_command('G1', self.cmd_G1_zhop, desc=cmd_desc_G1)
-#        self.gcode.register_command('G0', self.cmd_G1_zhop, desc=cmd_desc_G0)
-#
+    
+    ##########################################################################################  Re-register old G1 command handler
+    def re_register_G1(self):
+        self._toggle_gcode_commands('G1', 'G1.20140114', None, 'cmd_G1_help', True)
+        self._toggle_gcode_commands('G0', 'G0.20140114', None, 'cmd_G1_help', True)
     
     ######################################################################################### G1 method that accounts for z-hop by altering the z-coordinates
     ######################################################################################### Offsets are not touched to prevent incompatibility issues
     def cmd_G1_zhop(self,gcmd):
         params = gcmd.get_command_parameters()
         
-#        # Check if ramp flag set
-#        if self.ramp_move:
-#            # Reset flag
-#            self.ramp_move = False
-#            
-#            if not 'Z' in params:
-#                # If the first move after retract does not have a Z parameter, add parameter equal to z_hop_Z to create ramp move
-#                params['Z'] = str(self.z_hop_Z)
-#            else:
-#                # If the first move after retract does have a Z parameter, simply adjust the Z value to account for the additonal Z-hop offset
-#                params['Z'] = str(float(params['Z']) + self.z_hop_height)
-#            
-#        elif 'Z' in params:
-#            # Adjust the Z value to account for the Z-hop offset after retract and ramp move (if applicable)
-#            params['Z'] = str(float(params['Z']) + self.z_hop_height)
-#
-#        # Reconstruct the G1 command with adjusted parameters
-#        new_g1_command = 'G1.20140114'
-#        for key, value in params.items():
-#            new_g1_command += f' {key}{value}'
-
-        if 'Z' in params:
-            params['Z'] = str(float(params['Z']) + self.z_hop_height)
-        elif self.ramp_move:
+        # Check if ramp flag set
+        if self.ramp_move:
+            # Reset flag
             self.ramp_move = False
-            params['Z'] = str(self.z_hop_Z)
+            
+            if not 'Z' in params:
+                # If the first move after retract does not have a Z parameter, add parameter equal to z_hop_Z to create ramp move
+                params['Z'] = str(self.z_hop_Z)
+            else:
+                # If the first move after retract does have a Z parameter, simply adjust the Z value to account for the additonal Z-hop offset
+                params['Z'] = str(float(params['Z']) + self.z_hop_height)
+            
+        elif 'Z' in params:
+            # Adjust the Z value to account for the Z-hop offset after retract and ramp move (if applicable)
+            params['Z'] = str(float(params['Z']) + self.z_hop_height)
 
-        new_g1_command = ''.join([f'G1.20140114', *(f'{k}{v}' for k, v in params.items())])
+        # Reconstruct the G1 command with adjusted parameters
+        new_g1_command = 'G1.20140114'
+        for key, value in params.items():
+            new_g1_command += f' {key}{value}'
 
         # Run the G1.20140114 command with the adjusted parameters
         self.gcode.run_script_from_command(new_g1_command)
-        
+
+    ##########################################################################################  Helper to check that z_hop_style was input and is valid.
     def _check_z_hop_style(self):   
-        ############################################################################################################### Check that z_hop_style was input and is valid.
         if self.z_hop_style not in self.valid_z_hop_styles:
             self.z_hop_style = 'standard'
             logging.warning('The provided z_hop_style value is invalid. Using "standard" as default.')
+    
+    ##########################################################################################  Helper to toggle/untoggle command handlers and methods
+    def _toggle_gcode_commands(self, new_cmd_name, old_cmd_name, new_cmd_func, new_cmd_desc, toggle_state):
+        # Unregister the current command method from the current command handler and
+        # store in prev_cmd
+        prev_cmd = self.gcode.register_command(old_cmd_name, None)
+        pdesc = 'Renamed builtin of "%s"' % old_cmd_name
+        if not toggle_state:
+            # Register the previous command method with the toggled command handler and
+            # set its description to indicate it is a built-in command
+            self.gcode.register_command(new_cmd_name, prev_cmd, desc=pdesc)
+            # Register the toggled command method with the current command handler
+            self.gcode.register_command(old_cmd_name, new_cmd_func, desc=new_cmd_desc)
+        else:
+            # Unregister the toggled command method from the untoggled command handler
+            self.gcode.register_command(new_cmd_name, new_cmd_func)
+            # Register the untoggled command method with the untoggled command handler
+            self.gcode.register_command(new_cmd_name, prev_cmd, desc=new_cmd_desc)
+    
             
 # Function to load the FirmwareRetraction class from the configuration file
 def load_config(config):
