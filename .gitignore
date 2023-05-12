@@ -4,3 +4,6 @@ out
 .config
 .config.old
 klippy/.version
+klippy/extras/_ToDos
+klippy/extras/virtual_sdcard_readeronly.py
+klippy/extras/fw_gcode_manipulator.py
