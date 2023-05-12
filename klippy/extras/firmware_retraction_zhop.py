@@ -248,34 +248,34 @@ class FirmwareRetraction:
     def cmd_G1_zhop(self,gcmd):
         params = gcmd.get_command_parameters()
         
-#        # Check if ramp flag set
-#        if self.ramp_move:
-#            # Reset flag
-#            self.ramp_move = False
-#            
-#            if not 'Z' in params:
-#                # If the first move after retract does not have a Z parameter, add parameter equal to z_hop_Z to create ramp move
-#                params['Z'] = str(self.z_hop_Z)
-#            else:
-#                # If the first move after retract does have a Z parameter, simply adjust the Z value to account for the additonal Z-hop offset
-#                params['Z'] = str(float(params['Z']) + self.z_hop_height)
-#            
-#        elif 'Z' in params:
-#            # Adjust the Z value to account for the Z-hop offset after retract and ramp move (if applicable)
-#            params['Z'] = str(float(params['Z']) + self.z_hop_height)
-#
-#        # Reconstruct the G1 command with adjusted parameters
-#        new_g1_command = 'G1.20140114'
-#        for key, value in params.items():
-#            new_g1_command += f' {key}{value}'
-
-        if 'Z' in params:
-            params['Z'] = str(float(params['Z']) + self.z_hop_height)
-        elif self.ramp_move:
+        # Check if ramp flag set
+        if self.ramp_move:
+            # Reset flag
             self.ramp_move = False
-            params['Z'] = str(self.z_hop_Z)
+            
+            if not 'Z' in params:
+                # If the first move after retract does not have a Z parameter, add parameter equal to z_hop_Z to create ramp move
+                params['Z'] = str(self.z_hop_Z)
+            else:
+                # If the first move after retract does have a Z parameter, simply adjust the Z value to account for the additonal Z-hop offset
+                params['Z'] = str(float(params['Z']) + self.z_hop_height)
+            
+        elif 'Z' in params:
+            # Adjust the Z value to account for the Z-hop offset after retract and ramp move (if applicable)
+            params['Z'] = str(float(params['Z']) + self.z_hop_height)
 
-        new_g1_command = ' '.join([f'G1.20140114', *(f'{k}{v}' for k, v in params.items())])
+        # Reconstruct the G1 command with adjusted parameters
+        new_g1_command = 'G1.20140114'
+        for key, value in params.items():
+            new_g1_command += f' {key}{value}'
+
+#        if 'Z' in params:
+#            params['Z'] = str(float(params['Z']) + self.z_hop_height)
+#        elif self.ramp_move:
+#            self.ramp_move = False
+#            params['Z'] = str(self.z_hop_Z)
+#
+#        new_g1_command = ''.join([f'G1.20140114', *(f'{k}{v}' for k, v in params.items())])
 
         # Run the G1.20140114 command with the adjusted parameters
         self.gcode.run_script_from_command(new_g1_command)
