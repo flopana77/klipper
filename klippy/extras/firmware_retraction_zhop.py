@@ -100,8 +100,11 @@ class FirmwareRetraction:
     
     ##########################################################################################  Gcode Command G10 to perform firmware retraction
     def cmd_G10(self, gcmd):
+        # If printer is not homed
+        if 'xyz' not in self.printer.toolhead.homed_axes:
+            gcmd.respond_info('Printer is not homed. Command ignored!')
         # If the filament isn't already retracted
-        if not self.is_retracted:
+        elif not self.is_retracted:
             # Build the G-Code string to retract
             retract_gcode = (
                 "SAVE_GCODE_STATE NAME=_retract_state\n"
@@ -150,6 +153,8 @@ class FirmwareRetraction:
             # Swap original G1 handlers if z_hop enabled (z_hop_height greater 0)
             if self.z_hop_height > 0.0:
                 self.unregister_G1()
+        else:
+            gcmd.respond_info('Printer is already in retract state. Command ignored!')
 
     ##########################################################################################  GCode Command G11 to perform filament unretraction
     def cmd_G11(self, gcmd):
