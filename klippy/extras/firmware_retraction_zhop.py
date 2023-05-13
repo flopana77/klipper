@@ -84,7 +84,9 @@ class FirmwareRetraction:
     
     ##########################################################################################  Gcode Command G10 to perform firmware retraction
     def cmd_G10(self, gcmd):
-        kin_status = self.toolhead.get_kinematics()
+        # Check if Z axis is homed
+        curtime = self.printer.get_reactor().monotonic()
+        kin_status = self.toolhead.get_kinematics().get_status(curtime)
         # If printer is not homed
         if 'xyz' not in kin_status['homed_axes']:
             gcmd.respond_info('Printer is not homed. Command ignored!')
