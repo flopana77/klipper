@@ -25,6 +25,8 @@ class FirmwareRetraction:
         ############################################################################################################### Added z_hop_style to config, "Linear" or "Helix" for Bambu Lab style zhop. format all lower case and define valid inputs.
         self.z_hop_style = config.get('z_hop_style', default='standard').strip().lower()
         self._check_z_hop_style()
+        ############################################################################################################### Added verbose to config to enable7disable user messages
+        self.verbose = config.get('verbose', default=False)
         
         # Initialize unretract length, retracted state and ramp move flag, G1 and G0 toggle state
         self.unretract_length = (self.retract_length + self.unretract_extra_length)
@@ -89,7 +91,7 @@ class FirmwareRetraction:
         kin_status = self.toolhead.get_kinematics().get_status(curtime)
         # If printer is not homed
         if 'xyz' not in kin_status['homed_axes']:
-            gcmd.respond_info('Printer is not homed. Command ignored!')
+            if self.verbose: gcmd.respond_info('Printer is not homed. Command ignored!')
         # If the filament isn't already retracted
         elif not self.is_retracted:
             # Build the G-Code string to retract
@@ -141,7 +143,7 @@ class FirmwareRetraction:
             if self.z_hop_height > 0.0:
                 self.unregister_G1()
         else:
-            gcmd.respond_info('Printer is already in retract state. Command ignored!')
+            if self.verbose: gcmd.respond_info('Printer is already in retract state. Command ignored!')
 
     ##########################################################################################  GCode Command G11 to perform filament unretraction
     def cmd_G11(self, gcmd):
@@ -173,6 +175,8 @@ class FirmwareRetraction:
             
             # Set the flag to indicate that the filament is not retracted and activate original G1 method 
             self.is_retracted = False
+        else:
+            if self.verbose: gcmd.respond_info('Printer is not retracted. Command ignored!')
     
     ##########################################################################################  Register new G1 command handler    
     def unregister_G1(self):
