@@ -32,28 +32,6 @@ class FirmwareRetraction:
         self.ramp_move = False
         self.G1_toggled = False
         self.G0_toggled = False
- 
-    # Helper method to register commands and instantiate required objects
-    def _handle_ready(self):
-        # Get a reference to the gcode object
-        self.gcode = self.printer.lookup_object('gcode')
-        
-        # Get a reference to the gcode_move object
-        self.gcode_move = self.printer.lookup_object('gcode_move')
-
-        # Get a reference to the toolhead object
-        self.toolhead = self.printer.lookup_object('toolhead')
-        
-        # Register new G-code commands for setting/retrieving retraction parameters
-        self.gcode.register_command('SET_RETRACTION', self.cmd_SET_RETRACTION, desc=self.cmd_SET_RETRACTION_help)
-        self.gcode.register_command('GET_RETRACTION', self.cmd_GET_RETRACTION, desc=self.cmd_GET_RETRACTION_help)
-        
-        # Register new G-code commands for firmware retraction/unretraction
-        self.gcode.register_command('G10', self.cmd_G10)
-        self.gcode.register_command('G11', self.cmd_G11)
-        ############################################################################################################### Add M103 and M101 aliases for G10 and G11
-        self.gcode.register_command('M103', self.cmd_G10)
-        self.gcode.register_command('M101', self.cmd_G11)      
     
     # Helper method to return the current retraction parameters
     def get_status(self, eventtime):
@@ -106,8 +84,9 @@ class FirmwareRetraction:
     
     ##########################################################################################  Gcode Command G10 to perform firmware retraction
     def cmd_G10(self, gcmd):
+        kin_status = self.toolhead.get_kinematics()
         # If printer is not homed
-        if 'xyz' not in self.toolhead.homed_axes:
+        if 'xyz' not in kin_status['homed_axes']:
             gcmd.respond_info('Printer is not homed. Command ignored!')
         # If the filament isn't already retracted
         elif not self.is_retracted:
@@ -253,6 +232,28 @@ class FirmwareRetraction:
             self.gcode.register_command(new_cmd_name, new_cmd_func)
             # Register the untoggled command method with the untoggled command handler
             self.gcode.register_command(new_cmd_name, prev_cmd, desc=new_cmd_desc)
+    
+    # Helper method to register commands and instantiate required objects
+    def _handle_ready(self):
+        # Get a reference to the gcode object
+        self.gcode = self.printer.lookup_object('gcode')
+        
+        # Get a reference to the gcode_move object
+        self.gcode_move = self.printer.lookup_object('gcode_move')
+
+        # Get a reference to the toolhead object
+        self.toolhead = self.printer.lookup_object('toolhead')
+        
+        # Register new G-code commands for setting/retrieving retraction parameters
+        self.gcode.register_command('SET_RETRACTION', self.cmd_SET_RETRACTION, desc=self.cmd_SET_RETRACTION_help)
+        self.gcode.register_command('GET_RETRACTION', self.cmd_GET_RETRACTION, desc=self.cmd_GET_RETRACTION_help)
+        
+        # Register new G-code commands for firmware retraction/unretraction
+        self.gcode.register_command('G10', self.cmd_G10)
+        self.gcode.register_command('G11', self.cmd_G11)
+        ############################################################################################################### Add M103 and M101 aliases for G10 and G11
+        self.gcode.register_command('M103', self.cmd_G10)
+        self.gcode.register_command('M101', self.cmd_G11)  
     
             
 # Function to load the FirmwareRetraction class from the configuration file
