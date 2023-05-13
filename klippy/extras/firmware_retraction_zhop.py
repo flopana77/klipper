@@ -10,16 +10,7 @@ class FirmwareRetraction:
         # Get a reference to the printer object from the config after all components are registered
         self.printer = config.get_printer()
         self.printer.register_event_handler("klippy:ready", self.handle_ready)
-        
-        # Get a reference to the gcode object
-        self.gcode = self.printer.lookup_object('gcode')
-        
-        # Get a reference to the gcode_move object
-        self.gcode_move = self.printer.lookup_object('gcode_move')
-
-        # Get a reference to the toolhead object
-        self.toolhead = self.printer.lookup_object('toolhead')
-        
+       
         # Define valid z_hop styles
         self.valid_z_hop_styles = ['standard','ramp', 'helix']
         
@@ -41,6 +32,17 @@ class FirmwareRetraction:
         self.ramp_move = False
         self.G1_toggled = False
         self.G0_toggled = False
+ 
+    # Helper method to register commands and instantiate required objects
+    def _handle_ready(self):
+        # Get a reference to the gcode object
+        self.gcode = self.printer.lookup_object('gcode')
+        
+        # Get a reference to the gcode_move object
+        self.gcode_move = self.printer.lookup_object('gcode_move')
+
+        # Get a reference to the toolhead object
+        self.toolhead = self.printer.lookup_object('toolhead')
         
         # Register new G-code commands for setting/retrieving retraction parameters
         self.gcode.register_command('SET_RETRACTION', self.cmd_SET_RETRACTION, desc=self.cmd_SET_RETRACTION_help)
