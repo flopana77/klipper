@@ -15,6 +15,9 @@ class FirmwareRetraction:
         
         # Get a reference to the gcode_move object
         self.gcode_move = self.printer.lookup_object('gcode_move')
+
+        # Get a reference to the toolhead object
+        self.toolhead = self.printer.lookup_object('toolhead')
         
         # Define valid z_hop styles
         self.valid_z_hop_styles = ['standard','ramp', 'helix']
@@ -101,7 +104,7 @@ class FirmwareRetraction:
     ##########################################################################################  Gcode Command G10 to perform firmware retraction
     def cmd_G10(self, gcmd):
         # If printer is not homed
-        if 'xyz' not in self.printer.toolhead.homed_axes:
+        if 'xyz' not in self.toolhead.homed_axes:
             gcmd.respond_info('Printer is not homed. Command ignored!')
         # If the filament isn't already retracted
         elif not self.is_retracted:
