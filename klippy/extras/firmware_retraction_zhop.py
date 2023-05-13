@@ -9,7 +9,7 @@ class FirmwareRetraction:
     def __init__(self, config):
         # Get a reference to the printer object from the config after all components are registered
         self.printer = config.get_printer()
-        self.printer.register_event_handler("klippy:ready", self.handle_ready)
+        self.printer.register_event_handler("klippy:ready", self._handle_ready)
        
         # Define valid z_hop styles
         self.valid_z_hop_styles = ['standard','ramp', 'helix']
