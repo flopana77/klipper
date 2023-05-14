@@ -28,12 +28,19 @@ class FirmwareRetraction:
         ############################################################################################################### Added verbose to config to enable7disable user messages
         self.verbose = config.get('verbose', default=False)
         
-        # Initialize unretract length, retracted state and ramp move flag, G1 and G0 toggle state
+        # Get ather values from config
+        zconfig = config.getsection('stepper_z')
+        self.max_z = zconfig.getfloat('position_max', note_valid=False)
+        
+        # Initialize number variables
         self.unretract_length = (self.retract_length + self.unretract_extra_length)
+        self.currentZ = 0.0             # Current Gcode Z coordinate
+        self.z_hop_Z = 0.0              # Gcode Z coordinate of the zhop move
+        self.safe_z_hop_height = 0.0    # zhop height applied to prevent out-of-range moves
+
+        # Initialize boolean variables
         self.is_retracted = False
         self.ramp_move = False
-        self.G1_toggled = False
-        self.G0_toggled = False
     
     # Helper method to return the current retraction parameters
     def get_status(self, eventtime):
@@ -106,10 +113,9 @@ class FirmwareRetraction:
                 # If z_hop disabled (z_hop_height equal to or less than 0), no move except extruder
                 retract_gcode += "RESTORE_GCODE_STATE NAME=_retract_state"
             else:
-                # Get current position for z_hop move if enabled
-                self.currentZ = self._get_gcode_zpos()
-                self.z_hop_Z = self.currentZ + self.z_hop_height
-              
+                # Set safe zhop parameters to prevent out-of-range moves when canceling or finishing print while retracted
+                self._set_safe_zhop_params()
+
                 if self.z_hop_style == 'helix':
                     
                     # ADD THE CODE FOR GET NEXT COORDINATE AND CALCULAT HELIX CENTER POINT HERE!!!!!!!
@@ -199,10 +205,10 @@ class FirmwareRetraction:
                 params['Z'] = str(self.z_hop_Z)
             else:
                 # If the first move after retract does have a Z parameter, simply adjust the Z value to account for the additonal Z-hop offset
-                params['Z'] = str(float(params['Z']) + self.z_hop_height)
+                params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
         elif 'Z' in params:
             # Adjust the Z value to account for the Z-hop offset after retract and ramp move (if applicable)
-            params['Z'] = str(float(params['Z']) + self.z_hop_height)
+            params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
 
         # Reconstruct the G1 command with adjusted parameters
         new_g1_command = 'G1.20140114'
@@ -224,6 +230,19 @@ class FirmwareRetraction:
         gcodestatus = self.gcode_move.get_status()
         currentPos = gcodestatus['gcode_position']
         return currentPos[2]
+
+    ##########################################################################################  Helper to get current gcode position.
+    def _set_safe_zhop_params(self):        
+        self.currentZ = self._get_gcode_zpos()
+        
+        # Set safe z_hop height to prevent out-of-range moves. Variable used in zhop-G1 command
+        if self.currentZ + self.z_hop_height > self.max_z:
+            self.safe_z_hop_height = self.max_z - self.currentZ
+        else:
+            self.safe_z_hop_height = self.z_hop_height
+        
+        # Set safe z_hop position to prevent out-of-range moves
+        self.z_hop_Z = self.currentZ + self.safe_z_hop_height
     
     ##########################################################################################  Helper to get homing status
     def _get_homing_status(self):        
