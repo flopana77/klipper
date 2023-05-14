@@ -279,6 +279,8 @@ class FirmwareRetraction:
         
         # Get a reference to the gcode_move object
         self.gcode_move = self.printer.lookup_object('gcode_move')
+        if self.gcode_move is None:
+            print("gcode_move is None")
 
         # Get a reference to the toolhead object
         self.toolhead = self.printer.lookup_object('toolhead')
