@@ -114,7 +114,8 @@ class FirmwareRetraction:
                 retract_gcode += "RESTORE_GCODE_STATE NAME=_retract_state"
             else:
                 # Set safe zhop parameters to prevent out-of-range moves when canceling or finishing print while retracted
-                self._set_safe_zhop_params(self)
+                self._set_safe_zhop_params()
+                gcmd.respond_info('zhop params set')
 
                 if self.z_hop_style == 'helix':
                     
@@ -232,7 +233,7 @@ class FirmwareRetraction:
         return currentPos[2]
 
     ##########################################################################################  Helper to get current gcode position.
-    def _set_safe_zhop_params(self):        
+    def _set_safe_zhop_params(self):
         self.currentZ = self._get_gcode_zpos()
         
         # Set safe z_hop height to prevent out-of-range moves. Variable used in zhop-G1 command
