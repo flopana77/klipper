@@ -143,11 +143,14 @@ class FirmwareRetraction:
     def cmd_G11(self, gcmd):
         # If the filament is currently retracted
         if self.is_retracted:
+            gcmd.respond_info('line146')
             # Restore original G1 handlers if z_hop enabled (z_hop_height greater 0)
             if self.z_hop_height > 0.0:
+                gcmd.respond_info('line149')
                 self.re_register_G1(self)
 
             # Build the G-Code string to unretract
+            gcmd.respond_info('line153')
             unretract_gcode = (
                 "SAVE_GCODE_STATE NAME=_unretract_state\n"
                 "G91\n"
@@ -165,10 +168,12 @@ class FirmwareRetraction:
                 ).format(self.safe_z_hop_height)
                        
             # Use the G-code script to save the current state, move the filament, and restore the state
+            gcmd.respond_info('line171')
             self.gcode.run_script_from_command(unretract_gcode)
             
             # Set the flag to indicate that the filament is not retracted and activate original G1 method 
             self.is_retracted = False
+            gcmd.respond_info('line176')
         else:
             if self.verbose: gcmd.respond_info('Printer is not retracted. Command ignored!')
     
