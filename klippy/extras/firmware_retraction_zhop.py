@@ -105,7 +105,7 @@ class FirmwareRetraction:
                 retract_gcode += "RESTORE_GCODE_STATE NAME=_retract_state"
             else:
                 # Set safe zhop parameters to prevent out-of-range moves when canceling or finishing print while retracted
-                self._set_safe_zhop_params(gcmd)
+                self._set_safe_zhop_params()
 
                 if self.z_hop_style == 'helix':
                     
