@@ -233,8 +233,9 @@ class FirmwareRetraction:
         return currentPos[2]
 
     ##########################################################################################  Helper to get current gcode position.
-    def _set_safe_zhop_params(self):
+    def _set_safe_zhop_params(self,gcmd):
         self.currentZ = self._get_gcode_zpos()
+        gcmd.respond_info('current z set')
         
         # Set safe z_hop height to prevent out-of-range moves. Variable used in zhop-G1 command
         if self.currentZ + self.z_hop_height > self.max_z:
