@@ -86,11 +86,10 @@ class FirmwareRetraction:
     
     ##########################################################################################  Gcode Command G10 to perform firmware retraction
     def cmd_G10(self, gcmd):
-        # Check if Z axis is homed
-        curtime = self.printer.get_reactor().monotonic()
-        kin_status = self.toolhead.get_kinematics().get_status(curtime)
+        # Check homing status
+        homing_status = self._get_homing_status()
         # If printer is not homed
-        if 'xyz' not in kin_status['homed_axes']:
+        if 'xyz' not in homing_status:
             if self.verbose: gcmd.respond_info('Printer is not homed. Command ignored!')
         # If the filament isn't already retracted
         elif not self.is_retracted:
@@ -108,8 +107,6 @@ class FirmwareRetraction:
                 retract_gcode += "RESTORE_GCODE_STATE NAME=_retract_state"
             else:
                 # Get current position for z_hop move if enabled
-                #gcodestatus = self.gcode_move.get_status()
-                #currentPos = gcodestatus['gcode_position']
                 self.currentZ = self._get_gcode_zpos()
                 self.z_hop_Z = self.currentZ + self.z_hop_height
               
@@ -221,12 +218,19 @@ class FirmwareRetraction:
             self.z_hop_style = 'standard'
             logging.warning('The provided z_hop_style value is invalid. Using "standard" as default.')
             
-    ##########################################################################################  Helper to get current y position.
+    ##########################################################################################  Helper to get current gcode position.
     def _get_gcode_zpos(self):        
         # Get current gcode position for z_hop move if enabled
         gcodestatus = self.gcode_move.get_status()
         currentPos = gcodestatus['gcode_position']
         return currentPos[2]
+    
+    ##########################################################################################  Helper to get homing status
+    def _get_homing_status(self):        
+        # Check if Z axis is homed
+        curtime = self.printer.get_reactor().monotonic()
+        kin_status = self.toolhead.get_kinematics().get_status(curtime)
+        return kin_status['homed_axes']
     
     ##########################################################################################  Helper to toggle/untoggle command handlers and methods
     def _toggle_gcode_commands(self, new_cmd_name, old_cmd_name, new_cmd_func, new_cmd_desc, toggle_state):
