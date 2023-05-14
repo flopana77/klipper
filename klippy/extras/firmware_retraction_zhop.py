@@ -28,7 +28,7 @@ class FirmwareRetraction:
         ############################################################################################################### Added verbose to config to enable7disable user messages
         self.verbose = config.get('verbose', default=False)
         
-        # Get ather values from config
+        # Get other values from config
         zconfig = config.getsection('stepper_z')
         self.max_z = zconfig.getfloat('position_max', note_valid=False)
         
@@ -85,11 +85,11 @@ class FirmwareRetraction:
                           'UNRETRACT_EXTRA_LENGTH=%.5f UNRETRACT_SPEED=%.5f'
                           
                           ############################################################################################# Added back z-hop
-                          ' Z_HOP_HEIGHT=%.5f Z_HOP_STYLE=%s Z_Max=%s'
+                          ' Z_HOP_HEIGHT=%.5f Z_HOP_STYLE=%s '
                           % (self.retract_length, self.retract_speed,
                              self.unretract_extra_length, self.unretract_speed,
                              ########################################################################################## Added back z-hop
-                             self.z_hop_height, self.z_hop_style, self.max_z))
+                             self.z_hop_height, self.z_hop_style ))
     
     ##########################################################################################  Gcode Command G10 to perform firmware retraction
     def cmd_G10(self, gcmd):
@@ -226,9 +226,10 @@ class FirmwareRetraction:
             logging.warning('The provided z_hop_style value is invalid. Using "standard" as default.')
             
     ##########################################################################################  Helper to get current gcode position.
-    def _get_gcode_zpos(self):        
+    def _get_gcode_zpos(self,gcmd):        
         # Get current gcode position for z_hop move if enabled
         gcodestatus = self.gcode_move.get_status()
+        gcmd.respond_info('gcodestatus received')
         currentPos = gcodestatus['gcode_position']
         return currentPos[2]
 
