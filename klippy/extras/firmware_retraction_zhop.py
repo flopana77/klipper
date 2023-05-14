@@ -154,7 +154,7 @@ class FirmwareRetraction:
         if self.is_retracted:
             # Restore original G1 handlers if z_hop enabled (z_hop_height greater 0)
             if self.z_hop_height > 0.0:
-                self.re_register_G1()
+                self.re_register_G1(self)
 
             # Build the G-Code string to unretract
             unretract_gcode = (
