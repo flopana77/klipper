@@ -114,6 +114,7 @@ class FirmwareRetraction:
                 retract_gcode += "RESTORE_GCODE_STATE NAME=_retract_state"
             else:
                 # Set safe zhop parameters to prevent out-of-range moves when canceling or finishing print while retracted
+                gcmd.respond_info('zhop params to be set')
                 self._set_safe_zhop_params()
                 gcmd.respond_info('zhop params set')
 
