@@ -114,7 +114,7 @@ class FirmwareRetraction:
                 retract_gcode += "RESTORE_GCODE_STATE NAME=_retract_state"
             else:
                 # Set safe zhop parameters to prevent out-of-range moves when canceling or finishing print while retracted
-                self._set_safe_zhop_params()
+                self._set_safe_zhop_params(self)
 
                 if self.z_hop_style == 'helix':
                     
@@ -171,7 +171,7 @@ class FirmwareRetraction:
                 unretract_gcode += (
                     "G1 Z-{:.5f}\n"
                     "RESTORE_GCODE_STATE NAME=_unretract_state"
-                ).format(self.z_hop_height)
+                ).format(self.safe_z_hop_height)
                        
             # Use the G-code script to save the current state, move the filament, and restore the state
             self.gcode.run_script_from_command(unretract_gcode)
