@@ -215,19 +215,15 @@ class FirmwareRetraction:
             logging.warning('The provided z_hop_style value is invalid. Using "standard" as default.')
             
     ########################################################################################## Helper to get current gcode position.
-    def _get_gcode_zpos(self,gcmd):        
+    def _get_gcode_zpos(self):        
         # Get current gcode position for z_hop move if enabled
-        gcmd.respond_info('gcodestatus to be requested')
         gcodestatus = self.gcode_move.get_status()
-        gcmd.respond_info('gcodestatus received')
         currentPos = gcodestatus['gcode_position']
         return currentPos[2]
 
     ########################################################################################## Helper to get current gcode position.
-    def _set_safe_zhop_params(self,gcmd):
-        self.currentZ = self._get_gcode_zpos(gcmd)
-        
-        gcmd.respond_info('current z set')
+    def _set_safe_zhop_params(self):
+        self.currentZ = self._get_gcode_zpos()
         
         # Set safe z_hop height to prevent out-of-range moves. Variable used in zhop-G1 command
         if self.currentZ + self.z_hop_height > self.max_z:
