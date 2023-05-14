@@ -108,9 +108,9 @@ class FirmwareRetraction:
                 retract_gcode += "RESTORE_GCODE_STATE NAME=_retract_state"
             else:
                 # Get current position for z_hop move if enabled
-                gcodestatus = self.gcode_move.get_status()
-                currentPos = gcodestatus['gcode_position']
-                self.currentZ = currentPos[2]
+                #gcodestatus = self.gcode_move.get_status()
+                #currentPos = gcodestatus['gcode_position']
+                self.currentZ = self._get_gcode_zpos()
                 self.z_hop_Z = self.currentZ + self.z_hop_height
               
                 if self.z_hop_style == 'helix':
@@ -220,6 +220,13 @@ class FirmwareRetraction:
         if self.z_hop_style not in self.valid_z_hop_styles:
             self.z_hop_style = 'standard'
             logging.warning('The provided z_hop_style value is invalid. Using "standard" as default.')
+            
+    ##########################################################################################  Helper to get current y position.
+    def _get_gcode_zpos(self):        
+        # Get current gcode position for z_hop move if enabled
+        gcodestatus = self.gcode_move.get_status()
+        currentPos = gcodestatus['gcode_position']
+        return currentPos[2]
     
     ##########################################################################################  Helper to toggle/untoggle command handlers and methods
     def _toggle_gcode_commands(self, new_cmd_name, old_cmd_name, new_cmd_func, new_cmd_desc, toggle_state):
@@ -259,7 +266,7 @@ class FirmwareRetraction:
         self.gcode.register_command('G11', self.cmd_G11)
         ############################################################################################################### Add M103 and M101 aliases for G10 and G11
         self.gcode.register_command('M103', self.cmd_G10)
-        self.gcode.register_command('M101', self.cmd_G11)  
+        self.gcode.register_command('M101', self.cmd_G11)
     
             
 # Function to load the FirmwareRetraction class from the configuration file
