@@ -205,7 +205,7 @@ class FirmwareRetraction:
                 # If the first move after retract does have a Z parameter, simply adjust the Z value to account for the additonal Z-hop offset
                 params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
         elif 'Z' in params:
-            if not self._toolhead_is_relative():
+            if self._toolhead_is_relative() == False:
                 # In absolute mode, adjust the Z value to account for the Z-hop offset after retract and ramp move (if applicable)
                 params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
                 # In relative mode, don't adjust z params given that the zhop pffset is already considered in a previous move
