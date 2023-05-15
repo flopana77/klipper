@@ -26,7 +26,7 @@ class FirmwareRetraction:
         self.z_hop_height = config.getfloat('z_hop_height', 0., minval=0.)  # Added z_hop_height with 0mm minimum...Standard value is cero to prevent any incompatibility issues on merge
         self.z_hop_style = config.get('z_hop_style', default='standard').strip().lower()    # Added z_hop_style to config, "Linear" or "Helix" for Bambu Lab style zhop. format all lower case and define valid inputs.
         self._check_z_hop_style()
-        self.verbose = config.get('verbose', default=False) # Added verbose to config to enable7disable user messages
+        self.verbose = config.get('verbose', default=False) # Added verbose to config to enable/disable user messages
         
         # Get other values from config
         zconfig = config.getsection('stepper_z')
@@ -34,9 +34,9 @@ class FirmwareRetraction:
         
         # Initialize number variables
         self.unretract_length = (self.retract_length + self.unretract_extra_length)
-        self.currentZ = 0.0             # Current Gcode Z coordinate
-        self.z_hop_Z = 0.0              # Gcode Z coordinate of the zhop move
-        self.safe_z_hop_height = 0.0    # zhop height applied to prevent out-of-range moves
+        self.currentZ = 0.0                           # Current Gcode Z coordinate
+        self.z_hop_Z = 0.0                            # Gcode Z coordinate of the zhop move
+        self.safe_z_hop_height = self.z_hop_height    # zhop height applied to prevent out-of-range moves
 
         # Initialize boolean variables
         self.is_retracted = False
@@ -195,13 +195,20 @@ class FirmwareRetraction:
             self.ramp_move = False
             if not 'Z' in params:
                 # If the first move after retract does not have a Z parameter, add parameter equal to z_hop_Z to create ramp move
-                params['Z'] = str(self.z_hop_Z)
+                if self._toolhead_is_relative():
+                    # Toolhead movement in relative mode
+                    params['Z'] = str(self.safe_z_hop_height)
+                else:
+                    # Toolhead movement in absolute mode
+                    params['Z'] = str(self.z_hop_Z)
             else:
                 # If the first move after retract does have a Z parameter, simply adjust the Z value to account for the additonal Z-hop offset
                 params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
         elif 'Z' in params:
-            # Adjust the Z value to account for the Z-hop offset after retract and ramp move (if applicable)
-            params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
+            if not self._toolhead_is_relative():
+                # In absolute mode, adjust the Z value to account for the Z-hop offset after retract and ramp move (if applicable)
+                params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
+                # In relative mode, don't adjust z params given that the zhop pffset is already considered in a previous move
 
         # Reconstruct the G1 command with adjusted parameters
         new_g1_command = 'G1.20140114'
@@ -253,6 +260,12 @@ class FirmwareRetraction:
         curtime = self.printer.get_reactor().monotonic()
         kin_status = self.toolhead.get_kinematics().get_status(curtime)
         return kin_status['homed_axes']
+    
+    ########################################################################################## Helper to get homing status
+    def _toolhead_is_relative(self):        
+        # Check if toolhead movement is in relative mode to disable firmware retraction
+        gcodestatus = self.gcode_move.get_status()
+        return not gcodestatus['absolute_coord']
     
     ########################################################################################## Helper to toggle/untoggle command handlers and methods
     def _toggle_gcode_commands(self, new_cmd_name, old_cmd_name, new_cmd_func, new_cmd_desc, toggle_state):
