@@ -275,7 +275,7 @@ class FirmwareRetraction:
     def _toolhead_is_relative(self):        
         # Check if toolhead movement is in relative mode to consider in _G1_zhop
         gcodestatus = self.gcode_move.get_status()
-        movemode = gcodestatus['absolute_coord']
+        movemode = gcodestatus['absolute_coordinates']
         return not movemode
     
     ########################################################################################## Helper to toggle/untoggle command handlers and methods
