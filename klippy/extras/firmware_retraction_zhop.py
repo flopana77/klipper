@@ -87,9 +87,12 @@ class FirmwareRetraction:
     cmd_CLEAR_RETRACTION_help = ('Clear retraction state without retract move or zhop, if enabled')
     
     def cmd_CLEAR_RETRACTION(self, gcmd):
-        self._re_register_G1()      # Re-establish regular G1 command. zhop will be reversed on next move
-        self.is_retracted = False   # Remove retract flag to enable new retraction move
-        if self.verbose: gcmd.respond_info('Retraction cleared. zhop undone on next move.')
+        if self.is_retracted:
+            self._re_register_G1()      # Re-establish regular G1 command. zhop will be reversed on next move
+            self.is_retracted = False   # Remove retract flag to enable new retraction move
+            if self.verbose: gcmd.respond_info('Retraction cleared. zhop undone on next move.')
+        else:
+            if self.verbose: gcmd.respond_info('Printer is not retracted. Command ignored!')
             
     ########################################################################################## Gcode Command G10 to perform firmware retraction
     def cmd_G10(self, gcmd):
