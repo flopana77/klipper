@@ -11,7 +11,10 @@ class FirmwareRetraction:
         # Get a reference to the printer object from the config after all components are registered
         self.printer = config.get_printer()
         self.printer.register_event_handler("klippy:ready", self._handle_ready)
-       
+        
+        # Register Events to clear retraction
+        self.printer.register_event_handler("klippy:ready", self.cmd_CLEAR_RETRACTION)
+        
         # Define valid z_hop styles
         self.valid_z_hop_styles = ['standard','ramp', 'helix']
         
@@ -52,10 +55,9 @@ class FirmwareRetraction:
             'retract_state': self.is_retracted
         }
     
-    ########################################################################################## Help message for SET_RETRACTION command, obtained by issuing HELP command
+    ########################################################################################## Command to set the firmware retraction parameters
     cmd_SET_RETRACTION_help = ('Set firmware retraction parameters')
     
-    ########################################################################################## Command to set the firmware retraction parameters
     def cmd_SET_RETRACTION(self, gcmd):
         # SET_RETRACTION can only be executed when unretracted to prevent error and nozzle crashing
         if not self.is_retracted:
@@ -70,10 +72,9 @@ class FirmwareRetraction:
         else:
             gcmd.respond_info('Printer in retract state. SET_RETRACTION can only be executed while unretracted!')
 
-    ########################################################################################## Help message for GET_RETRACTION command
+    ########################################################################################## Command to report the current firmware retraction parameters
     cmd_GET_RETRACTION_help = ('Report firmware retraction paramters')
     
-    ########################################################################################## Command to report the current firmware retraction parameters
     def cmd_GET_RETRACTION(self, gcmd):
         gcmd.respond_info('RETRACT_LENGTH=%.5f RETRACT_SPEED=%.5f '
                           'UNRETRACT_EXTRA_LENGTH=%.5f UNRETRACT_SPEED=%.5f'
@@ -81,7 +82,15 @@ class FirmwareRetraction:
                           % (self.retract_length, self.retract_speed,
                              self.unretract_extra_length, self.unretract_speed,
                              self.z_hop_height, self.z_hop_style )) # Added back z-hop
+                            
+    ########################################################################################## Command to report the current firmware retraction parameters
+    cmd_CLEAR_RETRACTION_help = ('Clear retraction state without retract move or zhop, if enabled')
     
+    def cmd_CLEAR_RETRACTION(self, gcmd):
+        self._re_register_G1()      # Re-establish regular G1 command. zhop will be reversed on next move
+        self.is_retracted = False   # Remove retract flag to enable new retraction move
+        if self.verbose: gcmd.respond_info('Retraction cleared. zhop undone on next move.')
+            
     ########################################################################################## Gcode Command G10 to perform firmware retraction
     def cmd_G10(self, gcmd):
         # Check homing status
@@ -135,7 +144,7 @@ class FirmwareRetraction:
             
             # Swap original G1 handlers if z_hop enabled (z_hop_height greater 0)
             if self.z_hop_height > 0.0:
-                self.unregister_G1()
+                self._unregister_G1()
         else:
             if self.verbose: gcmd.respond_info('Printer is already in retract state. Command ignored!')
 
@@ -145,7 +154,7 @@ class FirmwareRetraction:
         if self.is_retracted:
             # Restore original G1 handlers if z_hop enabled (z_hop_height greater 0)
             if self.z_hop_height > 0.0:
-                self.re_register_G1()
+                self._re_register_G1()
 
             # Build the G-Code string to unretract
             unretract_gcode = (
@@ -172,18 +181,8 @@ class FirmwareRetraction:
         else:
             if self.verbose: gcmd.respond_info('Printer is not retracted. Command ignored!')
     
-    ########################################################################################## Register new G1 command handler    
-    def unregister_G1(self):
-        self._toggle_gcode_commands('G1.20140114', 'G1', self.cmd_G1_zhop, 'G1 command that accounts for z hop when retracted', False)
-        self._toggle_gcode_commands('G0.20140114', 'G0', self.cmd_G1_zhop, 'G0 command that accounts for z hop when retracted', False)
-    
-    ########################################################################################## Re-register old G1 command handler
-    def re_register_G1(self):
-        self._toggle_gcode_commands('G1', 'G1.20140114', None, 'cmd_G1_help', True)
-        self._toggle_gcode_commands('G0', 'G0.20140114', None, 'cmd_G1_help', True)
-    
     ######################################################################################### G1 method that accounts for z-hop by altering the z-coordinates. Offsets are not touched to prevent incompatibility issues
-    def cmd_G1_zhop(self,gcmd):
+    def _G1_zhop(self,gcmd):
         params = gcmd.get_command_parameters()
         
         # Check if ramp flag set
@@ -208,6 +207,16 @@ class FirmwareRetraction:
         # Run the G1.20140114 command with the adjusted parameters
         self.gcode.run_script_from_command(new_g1_command)
 
+    ########################################################################################## Register new G1 command handler    
+    def _unregister_G1(self):
+        self._toggle_gcode_commands('G1.20140114', 'G1', self._G1_zhop, 'G1 command that accounts for z hop when retracted', False)
+        self._toggle_gcode_commands('G0.20140114', 'G0', self._G1_zhop, 'G0 command that accounts for z hop when retracted', False)
+    
+    ########################################################################################## Re-register old G1 command handler
+    def _re_register_G1(self):
+        self._toggle_gcode_commands('G1', 'G1.20140114', None, 'cmd_G1_help', True)
+        self._toggle_gcode_commands('G0', 'G0.20140114', None, 'cmd_G1_help', True)
+        
     ########################################################################################## Helper to check that z_hop_style was input and is valid.
     def _check_z_hop_style(self):   
         if self.z_hop_style not in self.valid_z_hop_styles:
@@ -259,15 +268,16 @@ class FirmwareRetraction:
             # Register the untoggled command method with the untoggled command handler
             self.gcode.register_command(new_cmd_name, prev_cmd, desc=new_cmd_desc)
     
-    # Helper method to register commands and instantiate required objects
+    ########################################################################################## Helper method to register commands and instantiate required objects
     def _handle_ready(self):
         self.gcode = self.printer.lookup_object('gcode')    # Get a reference to the gcode object
         self.gcode_move = self.printer.lookup_object('gcode_move')  # Get a reference to the gcode_move object
         self.toolhead = self.printer.lookup_object('toolhead')  # Get a reference to the toolhead object
         
-        # Register new G-code commands for setting/retrieving retraction parameters
+        # Register new G-code commands for setting/retrieving retraction parameters and clearing retraction
         self.gcode.register_command('SET_RETRACTION', self.cmd_SET_RETRACTION, desc=self.cmd_SET_RETRACTION_help)
         self.gcode.register_command('GET_RETRACTION', self.cmd_GET_RETRACTION, desc=self.cmd_GET_RETRACTION_help)
+        self.gcode.register_command('CLEAR_RETRACTION', self.cmd_CLEAR_RETRACTION, desc=self.cmd_CLEAR_RETRACTION_help)
         
         # Register new G-code commands for firmware retraction/unretraction
         self.gcode.register_command('G10', self.cmd_G10)
