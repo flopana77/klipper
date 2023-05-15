@@ -49,7 +49,8 @@ class FirmwareRetraction:
             'retract_speed': self.retract_speed,
             'unretract_extra_length': self.unretract_extra_length,
             'unretract_speed': self.unretract_speed,
-            'z_hop_height': self.z_hop_height, # Added back z_hop_height and included z_hop style
+            'z_hop_height': self.z_hop_height, # Added back z_hop_height and included z_hop style and safe z_hop height
+            'safe_z_hop_height': self.safe_z_hop_height,
             'z_hop_style': self.z_hop_style,
             'unretract_length': self.unretract_length, # Add unretract_length and is_retracted to status output
             'retract_state': self.is_retracted
@@ -88,7 +89,7 @@ class FirmwareRetraction:
     
     def cmd_CLEAR_RETRACTION(self, gcmd):
         if self.is_retracted:
-            self._re_register_G1()      # Re-establish regular G1 command. zhop will be reversed on next move
+            self._re_register_G1()      # Re-establish regular G1 command. zhop will be reversed on next move with z coordinate
             self.is_retracted = False   # Remove retract flag to enable new retraction move
             if self.verbose: gcmd.respond_info('Retraction cleared. zhop undone on next move.')
         else:
