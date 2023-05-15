@@ -188,9 +188,7 @@ class FirmwareRetraction:
     ######################################################################################### G1 method that accounts for z-hop by altering the z-coordinates. Offsets are not touched to prevent incompatibility issues
     def _G1_zhop(self,gcmd):
         params = gcmd.get_command_parameters()
-        gcmd.respond_info('191')
         is_relative = self._toolhead_is_relative()
-        gcmd.respond_info('193')
         
         # Check if ramp flag set
         if self.ramp_move:
@@ -199,26 +197,19 @@ class FirmwareRetraction:
             if not 'Z' in params:
                 # If the first move after retract does not have a Z parameter, add parameter equal to z_hop_Z to create ramp move
                 if is_relative == True:
-                    gcmd.respond_info('202')
                     # Toolhead movement in relative mode
                     params['Z'] = str(self.safe_z_hop_height)
                 else:
                     # Toolhead movement in absolute mode
-                    gcmd.respond_info('207')
                     params['Z'] = str(self.z_hop_Z)
             else:
                 # If the first move after retract does have a Z parameter, simply adjust the Z value to account for the additonal Z-hop offset
-                gcmd.respond_info('211')
                 params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
-                gcmd.respond_info('213')
         elif 'Z' in params:
-            gcmd.respond_info('215')
             if is_relative == False:
-                gcmd.respond_info('217')
                 # In absolute mode, adjust the Z value to account for the Z-hop offset after retract and ramp move (if applicable)
                 params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
                 # In relative mode, don't adjust z params given that the zhop pffset is already considered in a previous move
-                gcmd.respond_info('221')
 
         # Reconstruct the G1 command with adjusted parameters
         new_g1_command = 'G1.20140114'
