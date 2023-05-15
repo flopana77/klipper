@@ -188,6 +188,7 @@ class FirmwareRetraction:
     ######################################################################################### G1 method that accounts for z-hop by altering the z-coordinates. Offsets are not touched to prevent incompatibility issues
     def _G1_zhop(self,gcmd):
         params = gcmd.get_command_parameters()
+        is_relative = self._toolhead_is_relative()
         
         # Check if ramp flag set
         if self.ramp_move:
@@ -195,7 +196,7 @@ class FirmwareRetraction:
             self.ramp_move = False
             if not 'Z' in params:
                 # If the first move after retract does not have a Z parameter, add parameter equal to z_hop_Z to create ramp move
-                if self._toolhead_is_relative():
+                if is_relative == True:
                     # Toolhead movement in relative mode
                     params['Z'] = str(self.safe_z_hop_height)
                 else:
@@ -205,7 +206,7 @@ class FirmwareRetraction:
                 # If the first move after retract does have a Z parameter, simply adjust the Z value to account for the additonal Z-hop offset
                 params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
         elif 'Z' in params:
-            if self._toolhead_is_relative() == False:
+            if is_relative == False:
                 # In absolute mode, adjust the Z value to account for the Z-hop offset after retract and ramp move (if applicable)
                 params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
                 # In relative mode, don't adjust z params given that the zhop pffset is already considered in a previous move
