@@ -13,7 +13,7 @@ class FirmwareRetraction:
         self.printer.register_event_handler("klippy:ready", self._handle_ready)
         
         # Register Events to clear retraction
-        self.printer.register_event_handler("klippy:ready", self.cmd_CLEAR_RETRACTION)
+        #self.printer.register_event_handler("klippy:ready", self.cmd_CLEAR_RETRACTION)
         
         # Define valid z_hop styles
         self.valid_z_hop_styles = ['standard','ramp', 'helix']
@@ -82,7 +82,7 @@ class FirmwareRetraction:
                           % (self.retract_length, self.retract_speed,
                              self.unretract_extra_length, self.unretract_speed,
                              self.z_hop_height, self.z_hop_style )) # Added back z-hop
-                            
+
     ########################################################################################## Command to report the current firmware retraction parameters
     cmd_CLEAR_RETRACTION_help = ('Clear retraction state without retract move or zhop, if enabled')
     
