@@ -273,9 +273,9 @@ class FirmwareRetraction:
     
     ########################################################################################## Helper to get homing status
     def _toolhead_is_relative(self):        
-        # Check if toolhead movement is in relative mode to disable firmware retraction
-        gcodestatus = self.gcode_move.get_status()
-        return not gcodestatus['absolute_coord']
+        # Check if toolhead movement is in relative mode to consider in _G1_zhop
+        movemode = self.gcode_move.get_status()
+        return not movemode['absolute_coord']
     
     ########################################################################################## Helper to toggle/untoggle command handlers and methods
     def _toggle_gcode_commands(self, new_cmd_name, old_cmd_name, new_cmd_func, new_cmd_desc, toggle_state):
