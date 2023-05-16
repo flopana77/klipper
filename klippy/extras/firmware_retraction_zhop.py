@@ -81,9 +81,10 @@ class FirmwareRetraction:
         gcmd.respond_info('RETRACT_LENGTH=%.5f RETRACT_SPEED=%.5f '
                           'UNRETRACT_EXTRA_LENGTH=%.5f UNRETRACT_SPEED=%.5f'
                           ' Z_HOP_HEIGHT=%.5f Z_HOP_STYLE=%s '
+                          ' RETRACTED=%s '
                           % (self.retract_length, self.retract_speed,
                              self.unretract_extra_length, self.unretract_speed,
-                             self.z_hop_height, self.z_hop_style )) # Added back z-hop
+                             self.z_hop_height, self.z_hop_style, self.is_retracted )) # Added back z-hop
 
     ########################################################################################## Command to report the current firmware retraction parameters
     cmd_CLEAR_RETRACTION_help = ('Clear retraction state without retract move or zhop, if enabled')
