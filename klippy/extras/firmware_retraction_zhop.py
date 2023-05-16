@@ -182,8 +182,9 @@ class FirmwareRetraction:
             # Use the G-code script to save the current state, move the filament, and restore the state
             self.gcode.run_script_from_command(unretract_gcode)
             
-            # Set the flag to indicate that the filament is not retracted and activate original G1 method 
+            # Set the flag to indicate that the filament is not retracted and erase ramp move flag (if not used)
             self.is_retracted = False
+            self.ramp_move = False
         else:
             if self.verbose: gcmd.respond_info('Printer is not retracted. Command ignored!')
     
