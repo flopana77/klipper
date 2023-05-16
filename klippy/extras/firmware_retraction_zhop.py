@@ -173,6 +173,8 @@ class FirmwareRetraction:
             if self.z_hop_height <= 0.0 or self.ramp_move:
                 # z_hop disabled or ramp move not executed, no move except extruder
                 unretract_gcode += "RESTORE_GCODE_STATE NAME=_unretract_state"
+                # Reset ramp move flag is not used in previous move
+                self.ramp_move = False
             else:          
                 unretract_gcode += (
                     "G1 Z-{:.5f}\n"
@@ -184,7 +186,6 @@ class FirmwareRetraction:
             
             # Set the flag to indicate that the filament is not retracted and erase ramp move flag (if not used)
             self.is_retracted = False
-            self.ramp_move = False
         else:
             if self.verbose: gcmd.respond_info('Printer is not retracted. Command ignored!')
     
