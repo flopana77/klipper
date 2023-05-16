@@ -68,10 +68,11 @@ class FirmwareRetraction:
             self.unretract_speed = gcmd.get_float('UNRETRACT_SPEED', self.unretract_speed, minval=1)
             self.z_hop_height = gcmd.get_float('Z_HOP_HEIGHT', self.z_hop_height, minval=0.)    # Added back z_hop_height with 0mm minimum
             self.z_hop_style = gcmd.get('Z_HOP_STYLE', self.z_hop_style).strip().lower()
+            self._check_z_hop_style()
             self.unretract_length = (self.retract_length + self.unretract_extra_length)
             self.is_retracted = False
         else:
-            gcmd.respond_info('Printer in retract state. SET_RETRACTION can only be executed while unretracted!')
+            if self.verbose: gcmd.respond_info('Printer in retract state. SET_RETRACTION will be executed once unretracted!')
 
     ########################################################################################## Command to report the current firmware retraction parameters
     cmd_GET_RETRACTION_help = ('Report firmware retraction paramters')
