@@ -19,14 +19,7 @@ class FirmwareRetraction:
         self.valid_z_hop_styles = ['standard','ramp', 'helix']
         
         # Initialize various retraction-related parameters from the config
-        self.retract_length = config.getfloat('retract_length', 0., minval=0.)
-        self.retract_speed = config.getfloat('retract_speed', 20., minval=1)
-        self.unretract_extra_length = config.getfloat('unretract_extra_length', 0., minval=0.)
-        self.unretract_speed = config.getfloat('unretract_speed', 10., minval=1)
-        self.z_hop_height = config.getfloat('z_hop_height', 0., minval=0.)  # Added z_hop_height with 0mm minimum...Standard value is cero to prevent any incompatibility issues on merge
-        self.z_hop_style = config.get('z_hop_style', default='standard').strip().lower()    # Added z_hop_style to config, "Linear" or "Helix" for Bambu Lab style zhop. format all lower case and define valid inputs.
-        self._check_z_hop_style()
-        self.verbose = config.get('verbose', default=False) # Added verbose to config to enable/disable user messages
+        self._get_config_retraction_params()
         
         # Get other values from config
         zconfig = config.getsection('stepper_z')
@@ -100,7 +93,9 @@ class FirmwareRetraction:
             self.is_retracted = False           # Remove retract flag to enable new retraction move
             self.ramp_move = False              # Remove ramp move flag to enable new retraction move
             self.stored_set_retraction_gcmds = [] # Reset list of stored commands
-            if self.verbose: gcmd.respond_info('Retraction, including queued SET_RETRACTION commands, was cleared. zhop is undone on next move.')
+            # Reset retraction parameters to config values
+            self._get_config_retraction_params()
+            if self.verbose: gcmd.respond_info('Retraction, including queued SET_RETRACTION commands, was cleared and reset to config values. zhop is undone on next move.')
         else:
             if self.verbose: gcmd.respond_info('Printer is not retracted. Command ignored!')
             
@@ -329,7 +324,17 @@ class FirmwareRetraction:
         self.gcode.register_command('G11', self.cmd_G11)
         self.gcode.register_command('M103', self.cmd_G10)   # Add M103 and M101 aliases for G10 and G11
         self.gcode.register_command('M101', self.cmd_G11)
-    
+
+    ########################################################################################## Helper method to get retraction parameters from config
+    def _get_config_retraction_params(self, config):
+        self.retract_length = config.getfloat('retract_length', 0., minval=0.)
+        self.retract_speed = config.getfloat('retract_speed', 20., minval=1)
+        self.unretract_extra_length = config.getfloat('unretract_extra_length', 0., minval=0.)
+        self.unretract_speed = config.getfloat('unretract_speed', 10., minval=1)
+        self.z_hop_height = config.getfloat('z_hop_height', 0., minval=0.)  # Added z_hop_height with 0mm minimum...Standard value is cero to prevent any incompatibility issues on merge
+        self.z_hop_style = config.get('z_hop_style', default='standard').strip().lower()    # Added z_hop_style to config, "Linear" or "Helix" for Bambu Lab style zhop. format all lower case and define valid inputs.
+        self._check_z_hop_style()   # Safe guard that zhop style is properly set
+        self.verbose = config.get('verbose', default=False) # Added verbose to config to enable/disable user messages
             
 ########################################################################################## Function to load the FirmwareRetraction class from the configuration file
 def load_config(config):
