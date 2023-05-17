@@ -8,6 +8,8 @@ import logging
 class FirmwareRetraction:
     ########################################################################################## Class init
     def __init__(self, config):
+        # Get a reference to the config
+        self.config = config
         # Get a reference to the printer object from the config after all components are registered
         self.printer = config.get_printer()
         self.printer.register_event_handler("klippy:ready", self._handle_ready)
@@ -19,7 +21,7 @@ class FirmwareRetraction:
         self.valid_z_hop_styles = ['standard','ramp', 'helix']
         
         # Initialize various retraction-related parameters from the config
-        self._get_config_retraction_params(config)
+        self._get_config_retraction_params()
         
         # Get other values from config
         zconfig = config.getsection('stepper_z')
@@ -87,14 +89,14 @@ class FirmwareRetraction:
     ########################################################################################## Command to report the current firmware retraction parameters
     cmd_CLEAR_RETRACTION_help = ('Clear retraction state without retract move or zhop, if enabled')
     
-    def cmd_CLEAR_RETRACTION(self, gcmd, config):
+    def cmd_CLEAR_RETRACTION(self, gcmd):
         if self.is_retracted:
             self._re_register_G1()              # Re-establish regular G1 command. zhop will be reversed on next move with z coordinate
             self.is_retracted = False           # Remove retract flag to enable new retraction move
             self.ramp_move = False              # Remove ramp move flag to enable new retraction move
             self.stored_set_retraction_gcmds = [] # Reset list of stored commands
             # Reset retraction parameters to config values
-            self._get_config_retraction_params(config)
+            self._get_config_retraction_params()
             if self.verbose: gcmd.respond_info('Retraction, including queued SET_RETRACTION commands, was cleared and reset to config values. zhop is undone on next move.')
         else:
             if self.verbose: gcmd.respond_info('Printer is not retracted. Command ignored!')
@@ -326,15 +328,15 @@ class FirmwareRetraction:
         self.gcode.register_command('M101', self.cmd_G11)
 
     ########################################################################################## Helper method to get retraction parameters from config
-    def _get_config_retraction_params(self, config):
-        self.retract_length = config.getfloat('retract_length', 0., minval=0.)
-        self.retract_speed = config.getfloat('retract_speed', 20., minval=1)
-        self.unretract_extra_length = config.getfloat('unretract_extra_length', 0., minval=0.)
-        self.unretract_speed = config.getfloat('unretract_speed', 10., minval=1)
-        self.z_hop_height = config.getfloat('z_hop_height', 0., minval=0.)  # Added z_hop_height with 0mm minimum...Standard value is cero to prevent any incompatibility issues on merge
-        self.z_hop_style = config.get('z_hop_style', default='standard').strip().lower()    # Added z_hop_style to config, "Linear" or "Helix" for Bambu Lab style zhop. format all lower case and define valid inputs.
+    def _get_config_retraction_params(self):
+        self.retract_length = self.config.getfloat('retract_length', 0., minval=0.)
+        self.retract_speed = self.config.getfloat('retract_speed', 20., minval=1)
+        self.unretract_extra_length = self.config.getfloat('unretract_extra_length', 0., minval=0.)
+        self.unretract_speed = self.config.getfloat('unretract_speed', 10., minval=1)
+        self.z_hop_height = self.config.getfloat('z_hop_height', 0., minval=0.)  # Added z_hop_height with 0mm minimum...Standard value is cero to prevent any incompatibility issues on merge
+        self.z_hop_style = self.config.get('z_hop_style', default='standard').strip().lower()    # Added z_hop_style to config, "Linear" or "Helix" for Bambu Lab style zhop. format all lower case and define valid inputs.
         self._check_z_hop_style()   # Safe guard that zhop style is properly set
-        self.verbose = config.get('verbose', default=False) # Added verbose to config to enable/disable user messages
+        self.verbose = self.config.get('verbose', default=False) # Added verbose to config to enable/disable user messages
             
 ########################################################################################## Function to load the FirmwareRetraction class from the configuration file
 def load_config(config):
