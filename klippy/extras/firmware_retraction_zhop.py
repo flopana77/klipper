@@ -86,8 +86,9 @@ class FirmwareRetraction:
         
         # List queued SET_RETRACTION commands if applicable
         if self.stored_set_retraction_gcmds:
-            for i, stored_gcmd in enumerate(self.stored_set_retraction_gcmds):
-                params = str(stored_gcmd.get_command_parameters())
+            for i, stored_gcmd in reversed(list(enumerate(self.stored_set_retraction_gcmds))):
+                # Formatting to make the stored command look like input
+                params = ' '.join(f'{k} = {v}' for k, v in stored_gcmd.get_command_parameters().items())
                 gcmd.respond_info('Stored command #%d: SET_RETRACTION %s' % (i + 1, params))
 
     ########################################################################################## Command to report the current firmware retraction parameters
