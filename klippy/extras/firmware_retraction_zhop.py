@@ -21,7 +21,7 @@ class FirmwareRetraction:
         self.valid_z_hop_styles = ['standard','ramp', 'helix']
         
         # Initialize various retraction-related parameters from the config
-        self._get_config_retraction_params()
+        self._get_config_params()
         
         # Get other values from config
         zconfig = config.getsection('stepper_z')
@@ -96,7 +96,7 @@ class FirmwareRetraction:
             self.ramp_move = False              # Remove ramp move flag to enable new retraction move
             self.stored_set_retraction_gcmds = [] # Reset list of stored commands
             # Reset retraction parameters to config values
-            self._get_config_retraction_params()
+            self._get_config_params()
             if self.verbose: gcmd.respond_info('Retraction, including queued SET_RETRACTION commands, was cleared and reset to config values. zhop is undone on next move.')
         else:
             if self.verbose: gcmd.respond_info('Printer is not retracted. Command ignored!')
@@ -328,7 +328,7 @@ class FirmwareRetraction:
         self.gcode.register_command('M101', self.cmd_G11)
 
     ########################################################################################## Helper method to get retraction parameters from config
-    def _get_config_retraction_params(self):
+    def _get_config_params(self):
         self.retract_length = self.config_ref.getfloat('retract_length', 0., minval=0.)
         self.retract_speed = self.config_ref.getfloat('retract_speed', 20., minval=1)
         self.unretract_extra_length = self.config_ref.getfloat('unretract_extra_length', 0., minval=0.)
