@@ -9,7 +9,7 @@ class FirmwareRetraction:
     ########################################################################################## Class init
     def __init__(self, config):
         # Get a reference to the config
-        self.config = config
+        self.config_ref = config
         # Get a reference to the printer object from the config after all components are registered
         self.printer = config.get_printer()
         self.printer.register_event_handler("klippy:ready", self._handle_ready)
@@ -329,14 +329,14 @@ class FirmwareRetraction:
 
     ########################################################################################## Helper method to get retraction parameters from config
     def _get_config_retraction_params(self):
-        self.retract_length = self.config.getfloat('retract_length', 0., minval=0.)
-        self.retract_speed = self.config.getfloat('retract_speed', 20., minval=1)
-        self.unretract_extra_length = self.config.getfloat('unretract_extra_length', 0., minval=0.)
-        self.unretract_speed = self.config.getfloat('unretract_speed', 10., minval=1)
-        self.z_hop_height = self.config.getfloat('z_hop_height', 0., minval=0.)  # Added z_hop_height with 0mm minimum...Standard value is cero to prevent any incompatibility issues on merge
-        self.z_hop_style = self.config.get('z_hop_style', default='standard').strip().lower()    # Added z_hop_style to config, "Linear" or "Helix" for Bambu Lab style zhop. format all lower case and define valid inputs.
+        self.retract_length = self.config_ref.getfloat('retract_length', 0., minval=0.)
+        self.retract_speed = self.config_ref.getfloat('retract_speed', 20., minval=1)
+        self.unretract_extra_length = self.config_ref.getfloat('unretract_extra_length', 0., minval=0.)
+        self.unretract_speed = self.config_ref.getfloat('unretract_speed', 10., minval=1)
+        self.z_hop_height = self.config_ref.getfloat('z_hop_height', 0., minval=0.)  # Added z_hop_height with 0mm minimum...Standard value is cero to prevent any incompatibility issues on merge
+        self.z_hop_style = self.config_ref.get('z_hop_style', default='standard').strip().lower()    # Added z_hop_style to config, "Linear" or "Helix" for Bambu Lab style zhop. format all lower case and define valid inputs.
         self._check_z_hop_style()   # Safe guard that zhop style is properly set
-        self.verbose = self.config.get('verbose', default=False) # Added verbose to config to enable/disable user messages
+        self.verbose = self.config_ref.get('verbose', default=False) # Added verbose to config to enable/disable user messages
             
 ########################################################################################## Function to load the FirmwareRetraction class from the configuration file
 def load_config(config):
