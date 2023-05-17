@@ -41,6 +41,9 @@ class FirmwareRetraction:
         # Initialize boolean variables
         self.is_retracted = False
         self.ramp_move = False
+        
+        # Initialize command list for delayed execution
+        self.stored_set_retraction_gcmds = []
     
     # Helper method to return the current retraction parameters
     def get_status(self, eventtime):
@@ -62,17 +65,12 @@ class FirmwareRetraction:
     def cmd_SET_RETRACTION(self, gcmd):
         # SET_RETRACTION can only be executed when unretracted to prevent error and nozzle crashing
         if not self.is_retracted:
-            self.retract_length = gcmd.get_float('RETRACT_LENGTH', self.retract_length, minval=0.)
-            self.retract_speed = gcmd.get_float('RETRACT_SPEED', self.retract_speed, minval=1)
-            self.unretract_extra_length = gcmd.get_float('UNRETRACT_EXTRA_LENGTH', self.unretract_extra_length, minval=0.)
-            self.unretract_speed = gcmd.get_float('UNRETRACT_SPEED', self.unretract_speed, minval=1)
-            self.z_hop_height = gcmd.get_float('Z_HOP_HEIGHT', self.z_hop_height, minval=0.)    # Added back z_hop_height with 0mm minimum
-            self.z_hop_style = gcmd.get('Z_HOP_STYLE', self.z_hop_style).strip().lower()
-            self._check_z_hop_style()
-            self.unretract_length = (self.retract_length + self.unretract_extra_length)
-            self.is_retracted = False
+            # Execute command immediately
+            self._execute_set_retraction(gcmd)
         else:
+            # Execute command queue command fror execution when G11 is called. In case of CLEAR_RETRACTION, stored ste_retraction commands are purged for safety.
             if self.verbose: gcmd.respond_info('Printer in retract state. SET_RETRACTION will be executed once unretracted!')
+            self.stored_set_retraction_gcmds.append(gcmd)
 
     ########################################################################################## Command to report the current firmware retraction parameters
     cmd_GET_RETRACTION_help = ('Report firmware retraction paramters')
@@ -85,15 +83,23 @@ class FirmwareRetraction:
                           % (self.retract_length, self.retract_speed,
                              self.unretract_extra_length, self.unretract_speed,
                              self.z_hop_height, self.z_hop_style, self.is_retracted )) # Added back z-hop
+        
+        # List queued SET_RETRACTION commands if applicable
+        if self.stored_set_retraction_gcmds:
+            for i, stored_gcmd in enumerate(self.stored_set_retraction_gcmds):
+                params = str(self.stored_set_retraction_gcmds.get_command_parameters())
+                gcmd.respond_info('Stored SET_RETRACTION command %d: %s' % (i + 1, params))
 
     ########################################################################################## Command to report the current firmware retraction parameters
     cmd_CLEAR_RETRACTION_help = ('Clear retraction state without retract move or zhop, if enabled')
     
     def cmd_CLEAR_RETRACTION(self, gcmd):
         if self.is_retracted:
-            self._re_register_G1()      # Re-establish regular G1 command. zhop will be reversed on next move with z coordinate
-            self.is_retracted = False   # Remove retract flag to enable new retraction move
-            if self.verbose: gcmd.respond_info('Retraction cleared. zhop undone on next move.')
+            self._re_register_G1()              # Re-establish regular G1 command. zhop will be reversed on next move with z coordinate
+            self.is_retracted = False           # Remove retract flag to enable new retraction move
+            self.ramp_move = False              # Remove ramp move flag to enable new retraction move
+            self.stored_set_retraction_gcmds = [] # Reset list of stored commands
+            if self.verbose: gcmd.respond_info('Retraction, including queued SET_RETRACTION commands, was cleared. zhop is undone on next move.')
         else:
             if self.verbose: gcmd.respond_info('Printer is not retracted. Command ignored!')
             
@@ -123,9 +129,7 @@ class FirmwareRetraction:
                 self._set_safe_zhop_params()
 
                 if self.z_hop_style == 'helix':
-                    
-                    # ADD THE CODE FOR GET NEXT COORDINATE AND CALCULAT HELIX CENTER POINT HERE!!!!!!!
-                    
+                    # --> ADD THE CODE FOR GET NEXT COORDINATE AND CALCULAT HELIX CENTER POINT HERE
                     retract_gcode += (
                         "G17\n" # Set XY plane for 360 degree arc move (including z move results in a helix)
                         "G2 Z{:.5f} I-1.22 J0\n"
@@ -186,6 +190,12 @@ class FirmwareRetraction:
             
             # Set the flag to indicate that the filament is not retracted and erase ramp move flag (if not used)
             self.is_retracted = False
+            
+            # If any SET_RETRACTION commands were stored, execute them now
+            if self.stored_set_retraction_gcmds:
+                for stored_gcmd in self.stored_set_retraction_gcmds:
+                    self._execute_set_retraction(stored_gcmd)
+                self.stored_set_retraction_gcmds=[] # Reset list of stored commands
         else:
             if self.verbose: gcmd.respond_info('Printer is not retracted. Command ignored!')
     
@@ -213,7 +223,7 @@ class FirmwareRetraction:
             if is_relative == False:
                 # In absolute mode, adjust the Z value to account for the Z-hop offset after retract and ramp move (if applicable)
                 params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
-                # In relative mode, don't adjust z params given that the zhop pffset is already considered in a previous move
+                # In relative mode, don't adjust z params given that the zhop offset is already considered in a previous move
 
         # Reconstruct the G1 command with adjusted parameters
         new_g1_command = 'G1.20140114'
@@ -222,6 +232,17 @@ class FirmwareRetraction:
 
         # Run the G1.20140114 command with the adjusted parameters
         self.gcode.run_script_from_command(new_g1_command)
+
+    ########################################################################################## Helper to set retraction parameters
+    def _execute_set_retraction(self,gcmd):     
+        self.retract_length = gcmd.get_float('RETRACT_LENGTH', self.retract_length, minval=0.)
+        self.retract_speed = gcmd.get_float('RETRACT_SPEED', self.retract_speed, minval=1.)
+        self.unretract_extra_length = gcmd.get_float('UNRETRACT_EXTRA_LENGTH', self.unretract_extra_length, minval=0.)
+        self.unretract_speed = gcmd.get_float('UNRETRACT_SPEED', self.unretract_speed, minval=1.)
+        self.z_hop_height = gcmd.get_float('Z_HOP_HEIGHT', self.z_hop_height, minval=0.)    # Added back z_hop_height with 0mm minimum
+        self.z_hop_style = gcmd.get('Z_HOP_STYLE', self.z_hop_style).strip().lower()
+        self._check_z_hop_style()
+        self.unretract_length = (self.retract_length + self.unretract_extra_length)
 
     ########################################################################################## Register new G1 command handler    
     def _unregister_G1(self):
