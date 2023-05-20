@@ -6,7 +6,7 @@
 
 class PrintStats:
     def __init__(self, config):
-        printer = config.get_printer()
+        printer = self.printer = config.get_printer() # Added printer attribute
         self.gcode_move = printer.load_object(config, 'gcode_move')
         self.reactor = printer.get_reactor()
         self.reset()
