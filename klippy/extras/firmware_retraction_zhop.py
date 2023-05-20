@@ -21,12 +21,25 @@ class FirmwareRetraction:
         # Print is started:  Most start gcodes include a G28 command to home all axes, which is generally NOT repeated during printing.
         #                    Using homing as an indicator to evaluate if a printjob has started. G28 requirement added in fucntion description.
         self.printer.register_event_handler("homing:home_rails_begin", self._evaluate_retraction)
-        # Print is canceled: On cancel, OctoPrint automatically disables stepper, which allows identifying a cancled print.
+        # Print is canceled: On cancel, OctoPrint automatically disables stepper, which allows identifying a canceled print.
         self.printer.register_event_handler("stepper_enable:motor_off", self._evaluate_retraction)
         # Print finishes: Most end gcodes disable steppers once a print is finished. This allows identifying a finished print.
+        #                 M84 requirement for end gcode is added in function description.
         #                 Steppers are also disabled on host and firmware restart, thus triggering retraction clear as well.
-        #                 M84 requirement added in function description.
-                
+        #                 Shutdown requires host and/or firmware restart, thus also triggerung retraction clear.
+
+        ########################################################################################## Virtual SD card mode (Default for Mainsail, Fluidd and DWC2-to-Klipper. Also possible via OctoPrint)
+        # Printing via virtual SD Card is recommended as start, cancel and finish print can be detected more reliably!
+        if config.getsection('virtual_sdcard') is not None:
+            # Print is started: If started using the SDCARD_PRINT_FILE command, any previously loaded file is reset first. Hence, the rest_file event indicates a starting print.
+            #                   If instead a file is loaded using M23 and a print is started using M24, the M23 also sends the reset_file event. However, if the print is repeated and there is no disable motor or homing
+            #                   command in the end-/start-gcode, the newly started print from virtual SD Card may pass unnoticed
+            self.printer.register_event_handler("virtual_sdcard:reset_file", self._evaluate_retraction)
+            # Print finishes: See above. The reset_file event indicates 
+            #
+            # Print is canceled:
+            #
+
         # Define valid z_hop styles
         self.valid_z_hop_styles = ['standard','ramp', 'helix']
         
@@ -114,6 +127,9 @@ class FirmwareRetraction:
         # If printer is not homed
         if 'xyz' not in homing_status:
             if self.verbose: gcmd.respond_info('Printer is not homed. Command ignored!')
+        # Check if extruder is above min. extrude temperature
+        elif not self.PrinterExtruder.heater.can_extrude:
+            if self.verbose: gcmd.respond_info('Extruder temperature too low. Command ignored!')
         # If the filament isn't already retracted
         elif not self.is_retracted:
             # Build the G-Code string to retract
@@ -133,7 +149,7 @@ class FirmwareRetraction:
                 self._set_safe_zhop_params()
 
                 if self.z_hop_style == 'helix':
-                    # --> ADD THE CODE FOR GET NEXT COORDINATE AND CALCULAT HELIX CENTER POINT HERE
+                    # --> ADD THE CODE FOR GETTING NEXT COORDINATE AND CALCULATE HELIX CENTER POINT HERE
                     retract_gcode += (
                         "G17\n" # Set XY plane for 360 degree arc move (including z move results in a helix)
                         "G2 Z{:.5f} I-1.22 J0\n"
@@ -164,42 +180,47 @@ class FirmwareRetraction:
 
     ########################################################################################## GCode Command G11 to perform filament unretraction
     def cmd_G11(self, gcmd):
-        # If the filament is currently retracted
+        # Check if the filament is currently retracted
         if self.is_retracted:
-            # Restore original G1 handlers if z_hop enabled (z_hop_height greater 0)
-            if self.z_hop_height > 0.0:
-                self._re_register_G1()
+            # Check if extruder is above min. extrude temperature
+            if not self.PrinterExtruder.heater.can_extrude:
+                self._execute_clear_retraction()
+                if self.verbose: gcmd.respond_info('Extruder temperature too low. Retraction cleared without retract move. zhop will be undone on next toolhead move.')
+            else:
+                # Restore original G1 handlers if z_hop enabled (z_hop_height greater 0)
+                if self.z_hop_height > 0.0:
+                    self._re_register_G1()
 
-            # Build the G-Code string to unretract
-            unretract_gcode = (
-                "SAVE_GCODE_STATE NAME=_unretract_state\n"
-                "G91\n"
-                "G1 E{:.5f} F{}\n"
-            ).format(self.unretract_length, int(self.unretract_speed * 60))
-            
-            # Include move command only if z_hop enabled
-            if self.z_hop_height <= 0.0 or self.ramp_move:
-                # z_hop disabled or ramp move not executed, no move except extruder
-                unretract_gcode += "RESTORE_GCODE_STATE NAME=_unretract_state"
-                # Reset ramp move flag is not used in previous move
-                self.ramp_move = False
-            else:          
-                unretract_gcode += (
-                    "G1 Z-{:.5f}\n"
-                    "RESTORE_GCODE_STATE NAME=_unretract_state"
-                ).format(self.safe_z_hop_height)
-                       
-            # Use the G-code script to save the current state, move the filament, and restore the state
-            self.gcode.run_script_from_command(unretract_gcode)
-            
-            # Set the flag to indicate that the filament is not retracted and erase ramp move flag (if not used)
-            self.is_retracted = False
-            
-            # If any SET_RETRACTION commands were stored, execute them now
-            if self.stored_set_retraction_gcmds:
-                for stored_gcmd in self.stored_set_retraction_gcmds:
-                    self._execute_set_retraction(stored_gcmd)
-                self.stored_set_retraction_gcmds=[] # Reset list of stored commands
+                # Build the G-Code string to unretract
+                unretract_gcode = (
+                    "SAVE_GCODE_STATE NAME=_unretract_state\n"
+                    "G91\n"
+                    "G1 E{:.5f} F{}\n"
+                ).format(self.unretract_length, int(self.unretract_speed * 60))
+                
+                # Include move command only if z_hop enabled
+                if self.z_hop_height <= 0.0 or self.ramp_move:
+                    # z_hop disabled or ramp move not executed, no move except extruder
+                    unretract_gcode += "RESTORE_GCODE_STATE NAME=_unretract_state"
+                    # Reset ramp move flag is not used in previous move
+                    self.ramp_move = False
+                else:          
+                    unretract_gcode += (
+                        "G1 Z-{:.5f}\n"
+                        "RESTORE_GCODE_STATE NAME=_unretract_state"
+                    ).format(self.safe_z_hop_height)
+                        
+                # Use the G-code script to save the current state, move the filament, and restore the state
+                self.gcode.run_script_from_command(unretract_gcode)
+                
+                # Set the flag to indicate that the filament is not retracted and erase ramp move flag (if not used)
+                self.is_retracted = False
+                
+                # If any SET_RETRACTION commands were stored, execute them now
+                if self.stored_set_retraction_gcmds:
+                    for stored_gcmd in self.stored_set_retraction_gcmds:
+                        self._execute_set_retraction(stored_gcmd)
+                    self.stored_set_retraction_gcmds=[] # Reset list of stored commands
         else:
             if self.verbose: gcmd.respond_info('Printer is not retracted. Command ignored!')
     
