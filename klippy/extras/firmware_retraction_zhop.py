@@ -15,7 +15,7 @@ class FirmwareRetraction:
         self.printer.register_event_handler("klippy:ready", self._handle_ready)
         
         # Register Events to clear retraction when a new print is started, an ongoing print is canceled or a print is finished
-                # Consider two operational modes: Printing from Virtual SD Card or via GCode streaming
+        # Consider two operational modes: Printing from Virtual SD Card or via GCode streaming
         
         ########################################################################################## GCode streaming mode (most commonly done via OctoPrint)
         # Print is started:  Most start gcodes include a G28 command to home all axes, which is generally NOT repeated during printing.
@@ -24,21 +24,24 @@ class FirmwareRetraction:
         # Print is canceled: On cancel, OctoPrint automatically disables stepper, which allows identifying a canceled print.
         self.printer.register_event_handler("stepper_enable:motor_off", self._evaluate_retraction)
         # Print finishes: Most end gcodes disable steppers once a print is finished. This allows identifying a finished print.
-        #                 M84 requirement for end gcode is added in function description.
-        #                 Steppers are also disabled on host and firmware restart, thus triggering retraction clear as well.
-        #                 Shutdown requires host and/or firmware restart, thus also triggerung retraction clear.
+        #                 M84 requirement for end gcode was added in function description.
+        #                 Steppers are also disabled on host and firmware restart, thus triggering clear retraction as well.
+        #                 Shutdown requires host and/or firmware restart, thus also triggerung clear retraction.
 
         ########################################################################################## Virtual SD card mode (Default for Mainsail, Fluidd and DWC2-to-Klipper. Also possible via OctoPrint)
         # Printing via virtual SD Card is recommended as start, cancel and finish print can be detected more reliably!
         if config.getsection('virtual_sdcard') is not None:
             # Print is started: If started using the SDCARD_PRINT_FILE command, any previously loaded file is reset first. Hence, the rest_file event indicates a starting print.
-            #                   If instead a file is loaded using M23 and a print is started using M24, the M23 also sends the reset_file event. However, if the print is repeated and there is no disable motor or homing
-            #                   command in the end-/start-gcode, the newly started print from virtual SD Card may pass unnoticed
+            #                   If instead a file is loaded using M23 and a print is started using M24, the M23 also sends the reset_file event. The reset_file event is tracked as means of redundancy.
             self.printer.register_event_handler("virtual_sdcard:reset_file", self._evaluate_retraction)
-            # Print finishes: See above. The reset_file event indicates 
-            #
-            # Print is canceled:
-            #
+            #                   However, if the print is repeated using the M24 command and there is no disable motor or homing command in the end-/start-gcode, the newly started
+            #                   print from virtual SD Card will pass unnoticed. Therefore, a print start event was included in print_stats, being automatically available if the VSD Card module is loaded.
+            self.printer.register_event_handler("print_stats:start_printing", self._evaluate_retraction) 
+            # Print finishes: A print complete event was included in print_stat to ientify a complete print.
+            #                 If retraction is active at the end of the print, and steppers are not disabled or a homing command is not issued shortly after, this event ensures that retraction is cleared anyways.
+            self.printer.register_event_handler("print_stats:complete_printing", self._evaluate_retraction)
+            # Print is canceled: If a VSD Card print is cancelled and no end_print gcode which diables motors is in place, the cancel event ensures that rettraction is cleared for the next print.
+            self.printer.register_event_handler("print_stats:cancelled_printing", self._evaluate_retraction)
 
         # Define valid z_hop styles
         self.valid_z_hop_styles = ['standard','ramp', 'helix']
@@ -182,7 +185,7 @@ class FirmwareRetraction:
     def cmd_G11(self, gcmd):
         # Check if the filament is currently retracted
         if self.is_retracted:
-            # Check if extruder is above min. extrude temperature
+            # Check if extruder is above min. extrude temperature. If not, don't do retract move but clear_retraction.
             if not self.extruder.heater.can_extrude:
                 self._execute_clear_retraction()
                 if self.verbose: gcmd.respond_info('Extruder temperature too low. Retraction cleared without retract move. zhop will be undone on next toolhead move.')
@@ -364,7 +367,7 @@ class FirmwareRetraction:
         self.gcode.register_command('M103', self.cmd_G10)   # Add M103 and M101 aliases for G10 and G11
         self.gcode.register_command('M101', self.cmd_G11)
 
-    ########################################################################################## Helper method to clear retraction depending on printer state (must accept all arguments passed from event handlers)
+    ########################################################################################## Helper method to clear retraction when certain events occur (must accept all arguments passed from event handlers)
     def _evaluate_retraction(self, *args):
         if self.is_retracted:
             self._execute_clear_retraction()
