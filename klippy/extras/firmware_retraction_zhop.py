@@ -124,11 +124,13 @@ class FirmwareRetraction:
     def cmd_G10(self, gcmd):
         # Check homing status
         homing_status = self._get_homing_status()
+        # Check extruder status
+        can_extrude = self.printer.extruder.can_extrude
         # If printer is not homed
         if 'xyz' not in homing_status:
             if self.verbose: gcmd.respond_info('Printer is not homed. Command ignored!')
         # Check if extruder is above min. extrude temperature
-        elif not self.heaters.heater.can_extrude:
+        elif not can_extrude:
             if self.verbose: gcmd.respond_info('Extruder temperature too low. Command ignored!')
         # If the filament isn't already retracted
         elif not self.is_retracted:
@@ -183,7 +185,7 @@ class FirmwareRetraction:
         # Check if the filament is currently retracted
         if self.is_retracted:
             # Check if extruder is above min. extrude temperature
-            if not self.heaters.heater.can_extrude:
+            if not self.extruder.heater.can_extrude:
                 self._execute_clear_retraction()
                 if self.verbose: gcmd.respond_info('Extruder temperature too low. Retraction cleared without retract move. zhop will be undone on next toolhead move.')
             else:
@@ -351,7 +353,6 @@ class FirmwareRetraction:
         self.gcode = self.printer.lookup_object('gcode')    # Get a reference to the gcode object
         self.gcode_move = self.printer.lookup_object('gcode_move')  # Get a reference to the gcode_move object
         self.toolhead = self.printer.lookup_object('toolhead')  # Get a reference to the toolhead object
-        self.heaters = self.printer.lookup_object('heaters')  # Get a reference to the heaters object
         
         # Register new G-code commands for setting/retrieving retraction parameters and clearing retraction
         self.gcode.register_command('SET_RETRACTION', self.cmd_SET_RETRACTION, desc=self.cmd_SET_RETRACTION_help)
