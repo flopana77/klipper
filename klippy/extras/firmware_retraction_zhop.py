@@ -128,7 +128,7 @@ class FirmwareRetraction:
         if 'xyz' not in homing_status:
             if self.verbose: gcmd.respond_info('Printer is not homed. Command ignored!')
         # Check if extruder is above min. extrude temperature
-        elif not self.extruder.can_extrude:
+        elif not self.extruder.heater.can_extrude:
             if self.verbose: gcmd.respond_info('Extruder temperature too low. Command ignored!')
         # If the filament isn't already retracted
         elif not self.is_retracted:
