@@ -14,9 +14,18 @@ class FirmwareRetraction:
         self.printer = config.get_printer()
         self.printer.register_event_handler("klippy:ready", self._handle_ready)
         
-        # Register Events to clear retraction
-        #self.printer.register_event_handler("klippy:ready", self.cmd_CLEAR_RETRACTION)
+        # Register Events to clear retraction when a new print is started, an ongoing print is canceled or a print is finished
+                # Consider two operational modes: Printing from Virtual SD Card or via GCode streaming
         
+        ########################################################################################## GCode streaming mode (most commonly done via OctoPrint)
+        # Print is started:  Most start gcodes include a G28 command to home all axes, which is generally NOT repeated during printing.
+        #                    Using homing as an indicator to evaluate if a printjob has started. G28 requirement added in fucntion description.
+        self.printer.register_event_handler("homing:home_rails_begin", self._evaluate_print_state_clear_retraction)
+        # Print is canceled: On cancel, OctoPrint automatically disables stepper, which allows identifying a cancled print.
+        self.printer.register_event_handler("stepper_enable:motor_off", self._evaluate_print_state_clear_retraction)
+        # Print finishes: Most end gcodes disable steppers once a print is finished. This allows identifying a finished print.
+        #                 M84 requirement added in fucnction description.
+                
         # Define valid z_hop styles
         self.valid_z_hop_styles = ['standard','ramp', 'helix']
         
@@ -74,10 +83,11 @@ class FirmwareRetraction:
         gcmd.respond_info('RETRACT_LENGTH=%.5f RETRACT_SPEED=%.5f '
                           'UNRETRACT_EXTRA_LENGTH=%.5f UNRETRACT_SPEED=%.5f'
                           ' Z_HOP_HEIGHT=%.5f Z_HOP_STYLE=%s '
-                          ' RETRACTED=%s '
+                          ' RETRACTED=%s RAMP_MOVE=%s'
                           % (self.retract_length, self.retract_speed,
                              self.unretract_extra_length, self.unretract_speed,
-                             self.z_hop_height, self.z_hop_style, self.is_retracted )) # Added back z-hop
+                             self.z_hop_height, self.z_hop_style, self.is_retracted,
+                             self.ramp_move )) # Added back z-hop
         
         # List queued SET_RETRACTION commands if applicable
         if self.stored_set_retraction_gcmds:
@@ -326,6 +336,10 @@ class FirmwareRetraction:
         self.gcode.register_command('G11', self.cmd_G11)
         self.gcode.register_command('M103', self.cmd_G10)   # Add M103 and M101 aliases for G10 and G11
         self.gcode.register_command('M101', self.cmd_G11)
+
+    ########################################################################################## Helper method to clear retraction depending on printer state
+    def _evaluate_print_state_clear_retraction(self):
+        1 == 1
 
     ########################################################################################## Helper method to get retraction parameters from config
     def _get_config_params(self):
