@@ -24,7 +24,8 @@ class FirmwareRetraction:
         # Print is canceled: On cancel, OctoPrint automatically disables stepper, which allows identifying a cancled print.
         self.printer.register_event_handler("stepper_enable:motor_off", self._evaluate_retraction)
         # Print finishes: Most end gcodes disable steppers once a print is finished. This allows identifying a finished print.
-        #                 M84 requirement added in fucnction description.
+        #                 Steppers are also disabled on host and firmware restart, thus triggering retraction clear as well.
+        #                 M84 requirement added in function description.
                 
         # Define valid z_hop styles
         self.valid_z_hop_styles = ['standard','ramp', 'helix']
@@ -242,7 +243,8 @@ class FirmwareRetraction:
         self.is_retracted = False               # Remove retract flag to enable new retraction move
         self.ramp_move = False                  # Remove ramp move flag to enable new retraction move
         self.stored_set_retraction_gcmds = []   # Reset list of stored commands
-        self._get_config_params()               # Reset retraction parameters to config values
+        if self.config_params_on_clear:
+            self._get_config_params()           # Reset retraction parameters to config values. Can be disabled in config but not in set_retraction
     
     ########################################################################################## Helper to set retraction parameters
     def _execute_set_retraction(self,gcmd):     
@@ -340,7 +342,7 @@ class FirmwareRetraction:
         self.gcode.register_command('M103', self.cmd_G10)   # Add M103 and M101 aliases for G10 and G11
         self.gcode.register_command('M101', self.cmd_G11)
 
-    ########################################################################################## Helper method to clear retraction depending on printer state
+    ########################################################################################## Helper method to clear retraction depending on printer state (must accept all arguments passed from event handlers)
     def _evaluate_retraction(self, *args):
         if self.is_retracted:
             self._execute_clear_retraction()
@@ -351,10 +353,11 @@ class FirmwareRetraction:
         self.retract_speed = self.config_ref.getfloat('retract_speed', 20., minval=1)
         self.unretract_extra_length = self.config_ref.getfloat('unretract_extra_length', 0., minval=0.)
         self.unretract_speed = self.config_ref.getfloat('unretract_speed', 10., minval=1)
-        self.z_hop_height = self.config_ref.getfloat('z_hop_height', 0., minval=0.)  # Added z_hop_height with 0mm minimum...Standard value is cero to prevent any incompatibility issues on merge
-        self.z_hop_style = self.config_ref.get('z_hop_style', default='standard').strip().lower()    # Added z_hop_style to config, "Linear" or "Helix" for Bambu Lab style zhop. format all lower case and define valid inputs.
+        self.z_hop_height = self.config_ref.getfloat('z_hop_height', 0., minval=0.)  # z_hop_height with 0mm minimum...Standard value is cero to prevent any incompatibility issues on merge
+        self.z_hop_style = self.config_ref.get('z_hop_style', default='standard').strip().lower()    # z_hop_style, "Linear" or "Helix" for Bambu Lab style zhop. format all lower case and define valid inputs.
         self._check_z_hop_style()   # Safe guard that zhop style is properly set
-        self.verbose = self.config_ref.get('verbose', default=False) # Added verbose to config to enable/disable user messages
+        self.verbose = self.config_ref.get('verbose', default=False) # verbose to enable/disable user messages
+        self.config_params_on_clear = self.config_ref.get('config_params_on_clear', default=True) # Control retraction parameter behaviour when retraction is clear. Default is to reset retraction parameters to config values.
             
 ########################################################################################## Function to load the FirmwareRetraction class from the configuration file
 def load_config(config):
