@@ -341,7 +341,7 @@ class FirmwareRetraction:
         self.gcode.register_command('M101', self.cmd_G11)
 
     ########################################################################################## Helper method to clear retraction depending on printer state
-    def _evaluate_retraction(self):
+    def _evaluate_retraction(self, *args):
         if self.is_retracted:
             self._execute_clear_retraction()
 
