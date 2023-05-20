@@ -3,8 +3,8 @@ Firmware retraction
     # Done steps:
     # 9) total zhop styles: standard, ramp, helix
     # 6) ramp z_hop: to do this, just don't execute vertical move but do command redefinition...
-    # 2) make z_hop depending on virtual sd card being installed --> Not needed. Disable Motor and oming event work also to monitor streaming gcode
-    # 3) prevent g10 to execute if not homed or if extruder temp not high enough --> homing condition implemented. temperature condition is already satisfied by heater code.
+    # 2) make z_hop depending on virtual sd card being installed --> Not needed. Disable Motor and homing event work also to monitor streaming gcode
+    # 3) prevent g10 to execute if not homed or if extruder temp not high enough --> both conditions implemented.
 
     # 1) add listening to virtual_sdcard:reset_file or polling change to printing or from printing and clear any retraction if this event happens
 
