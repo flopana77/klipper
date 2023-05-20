@@ -339,7 +339,7 @@ class FirmwareRetraction:
 
     ########################################################################################## Helper method to clear retraction depending on printer state
     def _evaluate_print_state_clear_retraction(self):
-        test = 1
+        self.cmd_CLEAR_RETRACTION()
 
     ########################################################################################## Helper method to get retraction parameters from config
     def _get_config_params(self):
