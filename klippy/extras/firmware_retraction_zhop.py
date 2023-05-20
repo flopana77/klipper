@@ -20,9 +20,9 @@ class FirmwareRetraction:
         ########################################################################################## GCode streaming mode (most commonly done via OctoPrint)
         # Print is started:  Most start gcodes include a G28 command to home all axes, which is generally NOT repeated during printing.
         #                    Using homing as an indicator to evaluate if a printjob has started. G28 requirement added in fucntion description.
-        self.printer.register_event_handler("homing:home_rails_begin", self._evaluate_print_state_clear_retraction)
+        self.printer.register_event_handler("homing:home_rails_begin", self._evaluate_retraction)
         # Print is canceled: On cancel, OctoPrint automatically disables stepper, which allows identifying a cancled print.
-        self.printer.register_event_handler("stepper_enable:motor_off", self._evaluate_print_state_clear_retraction)
+        self.printer.register_event_handler("stepper_enable:motor_off", self._evaluate_retraction)
         # Print finishes: Most end gcodes disable steppers once a print is finished. This allows identifying a finished print.
         #                 M84 requirement added in fucnction description.
                 
@@ -101,13 +101,8 @@ class FirmwareRetraction:
     
     def cmd_CLEAR_RETRACTION(self, gcmd):
         if self.is_retracted:
-            self._re_register_G1()              # Re-establish regular G1 command. zhop will be reversed on next move with z coordinate
-            self.is_retracted = False           # Remove retract flag to enable new retraction move
-            self.ramp_move = False              # Remove ramp move flag to enable new retraction move
-            self.stored_set_retraction_gcmds = [] # Reset list of stored commands
-            # Reset retraction parameters to config values
-            self._get_config_params()
-            if self.verbose: gcmd.respond_info('Retraction, including queued SET_RETRACTION commands, was cleared and reset to config values. zhop is undone on next move.')
+            self._execute_clear_retraction()
+            if self.verbose: gcmd.respond_info('Retraction, including SET_RETRACTION command queue, was cleared and reset to config values. zhop is undone on next move.')
         else:
             if self.verbose: gcmd.respond_info('Printer is not retracted. Command ignored!')
             
@@ -241,6 +236,14 @@ class FirmwareRetraction:
         # Run the G1.20140114 command with the adjusted parameters
         self.gcode.run_script_from_command(new_g1_command)
 
+    ########################################################################################## Helper to clear retraction
+    def _execute_clear_retraction(self):     
+        self._re_register_G1()                  # Re-establish regular G1 command. zhop will be reversed on next move with z coordinate
+        self.is_retracted = False               # Remove retract flag to enable new retraction move
+        self.ramp_move = False                  # Remove ramp move flag to enable new retraction move
+        self.stored_set_retraction_gcmds = []   # Reset list of stored commands
+        self._get_config_params()               # Reset retraction parameters to config values
+    
     ########################################################################################## Helper to set retraction parameters
     def _execute_set_retraction(self,gcmd):     
         self.retract_length = gcmd.get_float('RETRACT_LENGTH', self.retract_length, minval=0.)
@@ -338,8 +341,8 @@ class FirmwareRetraction:
         self.gcode.register_command('M101', self.cmd_G11)
 
     ########################################################################################## Helper method to clear retraction depending on printer state
-    def _evaluate_print_state_clear_retraction(self):
-        self.cmd_CLEAR_RETRACTION()
+    def _evaluate_retraction(self):
+        self._execute_clear_retraction()
 
     ########################################################################################## Helper method to get retraction parameters from config
     def _get_config_params(self):
