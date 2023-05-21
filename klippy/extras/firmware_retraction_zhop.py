@@ -8,10 +8,16 @@ import logging
 class FirmwareRetraction:
     ########################################################################################## Class init
     def __init__(self, config):
+        # Define valid z_hop styles
+        self.valid_z_hop_styles = ['standard','ramp', 'helix']
+        
         # Get a reference to the config
         self.config_ref = config
         # Get a reference to the printer object from the config after all components are registered
         self.printer = config.get_printer()
+        
+        # Initialize various retraction-related parameters from the config
+        self._get_config_params()
 
         # Initialize number variables
         self.unretract_length = (self.retract_length + self.unretract_extra_length)
@@ -30,16 +36,10 @@ class FirmwareRetraction:
                 
         # Initialize command list for delayed execution
         self.stored_set_retraction_gcmds = []
-
-        # Define valid z_hop styles
-        self.valid_z_hop_styles = ['standard','ramp', 'helix']
         
         # Get other values from config
         zconfig = config.getsection('stepper_z')
         self.max_z = zconfig.getfloat('position_max', note_valid=False)
-        
-        # Initialize various retraction-related parameters from the config
-        self._get_config_params()
         
         # Get refences and register commands and events
         self.printer.register_event_handler("klippy:ready", self._handle_ready)
@@ -329,7 +329,6 @@ class FirmwareRetraction:
     
     ########################################################################################## Helper method to register commands and instantiate required objects
     def _handle_ready(self):
-        self.vsdcard_enabled = False # Initialize virtual SD Card enable flag
         self.gcode = self.printer.lookup_object('gcode')    # Get a reference to the gcode object
         self.gcode_move = self.printer.lookup_object('gcode_move')  # Get a reference to the gcode_move object
         self.toolhead = self.printer.lookup_object('toolhead')  # Get a reference to the toolhead object
@@ -367,15 +366,15 @@ class FirmwareRetraction:
         if self.vsdcard_enabled:
             # Print is started: If started using the SDCARD_PRINT_FILE command, any previously loaded file is reset first. Hence, the rest_file event indicates a starting print.
             #                   If instead a file is loaded using M23 and a print is started using M24, the M23 also sends the reset_file event. The reset_file event is tracked as means of redundancy.
-            self.printer.register_event_handler("virtual_sdcard:reset_file", self._evaluate_retraction(False))
+            self.printer.register_event_handler("virtual_sdcard:reset_file", self._evaluate_retraction)
             #                   However, if the print is repeated using the M24 command and there is no disable motor or homing command in the end-/start-gcode, the newly started
             #                   print from virtual SD Card will pass unnoticed. Therefore, a print start event was included in print_stats, being automatically available if the VSD Card module is loaded.
-            self.printer.register_event_handler("print_stats:start_printing", self._evaluate_retraction(False)) 
+            self.printer.register_event_handler("print_stats:start_printing", self._evaluate_retraction) 
             # Print finishes: A print complete event was included in print_stat to ientify a complete print.
             #                 If retraction is active at the end of the print, and steppers are not disabled or a homing command is not issued shortly after, this event ensures that retraction is cleared anyways.
-            self.printer.register_event_handler("print_stats:complete_printing", self._evaluate_retraction(False))
+            self.printer.register_event_handler("print_stats:complete_printing", self._evaluate_retraction)
             # Print is canceled: If a VSD Card print is cancelled and no end_print gcode which diables motors is in place, the cancel event ensures that rettraction is cleared for the next print.
-            self.printer.register_event_handler("print_stats:cancelled_printing", self._evaluate_retraction(True))
+            self.printer.register_event_handler("print_stats:cancelled_printing", self._reset_pause_flag)
             #
             # Print is paused: This is a tricky failure case. The pause itself is not the issue. On resume, the start_printing event is triggered, thus clearing retraction.
             #                  Hence, the pause event needs to be motitored to prevent a retraction clear when paused. Otherwise, the printer prints in air...
@@ -385,12 +384,17 @@ class FirmwareRetraction:
     def _set_pause_flag(self, *args):
         self.vsdcard_paused = True
 
+    ########################################################################################## Helper method to reset pause flag set during cancle command and evaluate retraction
+    def _reset_pause_flag(self, *args):
+        self.vsdcard_paused = False
+        self._evaluate_retraction()
+        
     ########################################################################################## Helper method to clear retraction when certain events occur (must accept all arguments passed from event handlers)
-    def _evaluate_retraction(self, cancel, *args):
+    def _evaluate_retraction(self, *args):
         # Check if retracted
         if self.is_retracted:
             # Check if VSDCard print is paused 
-                if self.vsdcard_paused and not cancel:
+                if self.vsdcard_paused:
                     self.vsdcard_paused = False # Reset paused flag and hence do not clear retraction on resume command. If cancel command triggered a pause event, clear retraction.
                 else:
                     self._execute_clear_retraction()
