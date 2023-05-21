@@ -366,14 +366,14 @@ class FirmwareRetraction:
         if self.vsdcard_enabled:
             # Print is started: If started using the SDCARD_PRINT_FILE command, any previously loaded file is reset first. Hence, the rest_file event indicates a starting print.
             #                   If instead a file is loaded using M23 and a print is started using M24, the M23 also sends the reset_file event. The reset_file event is tracked as means of redundancy.
-            self.printer.register_event_handler("virtual_sdcard:reset_file", self._evaluate_retraction)
+            self.printer.register_event_handler("virtual_sdcard:reset_file", self._reset_pause_flag)
             #                   However, if the print is repeated using the M24 command and there is no disable motor or homing command in the end-/start-gcode, the newly started
             #                   print from virtual SD Card will pass unnoticed. Therefore, a print start event was included in print_stats, being automatically available if the VSD Card module is loaded.
             self.printer.register_event_handler("print_stats:start_printing", self._evaluate_retraction) 
             # Print finishes: A print complete event was included in print_stat to ientify a complete print.
             #                 If retraction is active at the end of the print, and steppers are not disabled or a homing command is not issued shortly after, this event ensures that retraction is cleared anyways.
             self.printer.register_event_handler("print_stats:complete_printing", self._evaluate_retraction)
-            # Print is canceled: If a VSD Card print is cancelled and no end_print gcode which diables motors is in place, the cancel event ensures that rettraction is cleared for the next print.
+            # Print is canceled: If a VSD Card print is cancelled and no end_print gcode which diables motors is in place, the cancel event ensures that retraction is cleared for the next print.
             self.printer.register_event_handler("print_stats:cancelled_printing", self._reset_pause_flag)
             #
             # Print is paused: This is a tricky failure case. The pause itself is not the issue. On resume, the start_printing event is triggered, thus clearing retraction.
@@ -384,7 +384,7 @@ class FirmwareRetraction:
     def _set_pause_flag(self, *args):
         self.vsdcard_paused = True
 
-    ########################################################################################## Helper method to reset pause flag set during cancle command and evaluate retraction
+    ########################################################################################## Helper method to reset pause flags and force evaluate retraction
     def _reset_pause_flag(self, *args):
         self.vsdcard_paused = False
         self._evaluate_retraction()
