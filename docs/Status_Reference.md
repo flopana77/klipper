@@ -162,12 +162,21 @@ objects:
 ## firmware_retraction
 
 The following information is available in the
-[firmware_retraction](Config_Reference.md#firmware_retraction) object:
-- `retract_length`, `retract_speed`, `unretract_extra_length`,
-  `unretract_speed`: The current settings for the firmware_retraction
-  module. These settings may differ from the config file if a
-  `SET_RETRACTION` command alters them.
-
+[firmware_retraction](Config_Reference.md#firmware_retraction) object ():
+- `retract_length`: Current setting for length of retract moves.
+- `retract_speed`: Current setting for speed of retract moves of filament.
+- `unretract_extra_length`: Current setting for additional length of
+  unretract moves (positive values will result in filament extrusion, while
+  negative values will result in lagging extrusion of filament).
+- `unretract_speed`: Current setting for speed of unretract moves of filament.
+- `unretract_length`: Unretract move length (sum of retract and extra unretract length).
+- `z_hop_height`: Current setting for the height of Z-Hops.
+- `z_hop_style`: Current setting for the style of Z-Hops.
+- Above settings for the firmware_retraction module may differ from the 
+  config file if a `SET_RETRACTION` command alters them. Additional information
+  available is as follows.
+- `retract_state`: Returns True if filament is retracted
+.
 ## gcode_macro
 
 The following information is available in

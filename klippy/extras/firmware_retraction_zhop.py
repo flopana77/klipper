@@ -1,4 +1,8 @@
 # Support for Marlin/Smoothie/Reprap style firmware retraction via G10/G11
+# Zhop funtionality includes:
+#   - Standard zhop (vertical move up, travel, vertical move down)
+#   - Diagonal zhop (travel move with vertical zhop component and vertical move down as proposed by the community)
+#   - Helix zhop (helix move up, travel, vertical move down as implemented as default by BambuLabs)
 #
 # Copyright (C) 2023  Florian-Patrice Nagel <flopana77@gmail.com>
 #
@@ -77,7 +81,7 @@ class FirmwareRetraction:
                 params = ' '.join(f'{k} = {v}' for k, v in stored_gcmd.get_command_parameters().items())
                 gcmd.respond_info('Stored command #%d: SET_RETRACTION %s' % (i + 1, params))
 
-    ########################################################################################## Command to report the current firmware retraction parameters
+    ########################################################################################## Command to clear firmware retraction (this should be added to custom CANCEL macros at the beginning)
     cmd_CLEAR_RETRACTION_help = ('Clear retraction state without retract move or zhop, if enabled')
     
     def cmd_CLEAR_RETRACTION(self, gcmd):
