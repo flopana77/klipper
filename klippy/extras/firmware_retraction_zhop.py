@@ -90,17 +90,16 @@ class FirmwareRetraction:
                 "SAVE_GCODE_STATE NAME=_retract_state\n"
                 "G91\n"
                 "G1 E-{:.5f} F{}\n"
-                "G90\n"                                                                                 # Switch back to absolute mode given that the following commands are in absolute mode
+                "RESTORE_GCODE_STATE NAME=_retract_state\n"                                             # Restore state so that zhop moves are executed with regular speed and accel
+                "G90\n"                                                                                 # Switch to absolute mode (just in case the gcode would be relative for some reason) given that the following commands are in absolute mode
             ).format(self.retract_length, int(self.retract_speed * 60))
 
-            if self.z_hop_height <= 0.0:                                                                # Include move command if z_hop_height greater 0 depending on z_hop_style
-                retract_gcode += "RESTORE_GCODE_STATE NAME=_retract_state"                              # If z_hop disabled (z_hop_height equal to or less than 0), no move except extruder
-            else:
+            if self.z_hop_height > 0.0:                                                                 # Include move command if z_hop_height greater 0 depending on z_hop_style
                 self._set_safe_zhop_params()                                                            # Set safe zhop parameters to prevent out-of-range moves when canceling or finishing print while retracted
                 if self.z_hop_style == 'helix':                                                         # --> ADD THE CODE FOR GETTING NEXT COORDINATE AND CALCULATE HELIX CENTER POINT HERE                                                                          
                     retract_gcode += (
                         "G17\n"                                                                         # Set XY plane for 360 degree arc move (including z move results in a helix)
-                        "G2 Z{:.5f} I-1.22 J0\n"
+                        "G2 Z{:.5f} I-1.22 J0.0\n"
                     ).format(self.z_hop_Z)
                 elif self.z_hop_style == 'standard':                                                    # Standard vertical move with enabled z_hop_height
                     retract_gcode += (
@@ -108,13 +107,12 @@ class FirmwareRetraction:
                     ).format(self.z_hop_Z)
                 elif self.z_hop_style == 'ramp':                                                        # Ramp move: z_hop performed during first G1 move after retract command
                     self.ramp_move = True                                                               # Set flag to trigger ramp move in the next G1 command
-                
-                retract_gcode += "RESTORE_GCODE_STATE NAME=_retract_state"                              # Restore state in all three cases
+                retract_gcode += "RESTORE_GCODE_STATE NAME=_retract_state"                              # Restore state, just in case the gcode file is in relative mode
                             
             self.gcode.run_script_from_command(retract_gcode)                                           # Use the G-code script to save the current state, move the filament, and restore the state
             self.is_retracted = True                                                                    # Set the flag to indicate that the filament is retracted and activate G1 method with z-hop compensation
             
-            if self.z_hop_height > 0.0:                                                                 # Swap original G1 handlers if z_hop enabled (z_hop_height greater 0)
+            if self.z_hop_height > 0.0:                                                                 # Swap original G1 handlers if z_hop enabled (z_hop_height greater 0) to offset all following moves in eiter absolute or relative mode
                 self._unregister_G1()
         else:
             if self.verbose: gcmd.respond_info('Printer is already in retract state. Command ignored!')
@@ -130,21 +128,21 @@ class FirmwareRetraction:
             else:
                 if self.z_hop_height > 0.0:                                                              # Restore original G1 handlers if z_hop enabled (z_hop_height greater 0)
                     self._re_register_G1()
-
-                unretract_gcode = (
-                    "SAVE_GCODE_STATE NAME=_unretract_state\n"
-                    "G91\n"
-                    "G1 E{:.5f} F{}\n"
-                ).format(self.unretract_length, int(self.unretract_speed * 60))                         # Build the G-Code string to unretract
                 
-                if self.z_hop_height <= 0.0 or self.ramp_move:                                          # Include move command only if z_hop enabled
-                    unretract_gcode += "RESTORE_GCODE_STATE NAME=_unretract_state"                      # z_hop disabled or ramp move not executed, no move except extruder
-                    self.ramp_move = False                                                              # Reset ramp move flag is not used in previous move
-                else:          
+                unretract_gcode += "SAVE_GCODE_STATE NAME=_unretract_state\n"                           # Start unretract gcode
+                
+                if self.z_hop_height > 0.0 and self.ramp_move:                                          # Include move command only if z_hop enabled
+                    self.ramp_move = False                                                              # Reset ramp move flag if not used in previous move
+                elif self.z_hop_height > 0.0:
                     unretract_gcode += (
-                        "G1 Z-{:.5f}\n"
-                        "RESTORE_GCODE_STATE NAME=_unretract_state"
+                        "G91\n"
+                        "G1 Z-{:.5f}\n"                                                                 # If ramp move was used or standard or helix move were done, un_zhop
                     ).format(self.safe_z_hop_height)
+                
+                unretract_gcode = (
+                    "G1 E{:.5f} F{}\n"                                                                  # Unretrcat filament
+                    "RESTORE_GCODE_STATE NAME=_unretract_state"
+                ).format(self.unretract_length, int(self.unretract_speed * 60))                         # Build the G-Code string to unretract
                 
                 self.gcode.run_script_from_command(unretract_gcode)                                     # Use the G-code script to save the current state, move the filament, and restore the state
                 self.is_retracted = False                                                               # Set the flag to indicate that the filament is not retracted and erase ramp move flag (if not used)
