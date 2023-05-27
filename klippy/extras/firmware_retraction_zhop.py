@@ -129,7 +129,7 @@ class FirmwareRetraction:
                 if self.z_hop_height > 0.0:                                                              # Restore original G1 handlers if z_hop enabled (z_hop_height greater 0)
                     self._re_register_G1()
                 
-                unretract_gcode += "SAVE_GCODE_STATE NAME=_unretract_state\n"                           # Start unretract gcode
+                unretract_gcode = "SAVE_GCODE_STATE NAME=_unretract_state\n"                           # Start unretract gcode
                 
                 if self.z_hop_height > 0.0 and self.ramp_move:                                          # Include move command only if z_hop enabled
                     self.ramp_move = False                                                              # Reset ramp move flag if not used in previous move
