@@ -139,7 +139,7 @@ class FirmwareRetraction:
                         "G1 Z-{:.5f}\n"                                                                 # If ramp move was used or standard or helix move were done, un_zhop
                     ).format(self.safe_z_hop_height)
                 
-                unretract_gcode = (
+                unretract_gcode += (
                     "G1 E{:.5f} F{}\n"                                                                  # Unretrcat filament
                     "RESTORE_GCODE_STATE NAME=_unretract_state"
                 ).format(self.unretract_length, int(self.unretract_speed * 60))                         # Build the G-Code string to unretract
