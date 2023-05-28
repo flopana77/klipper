@@ -152,7 +152,7 @@ class FirmwareRetraction:
                         "SET_VELOCITY_LIMIT VELOCITY={:.5f} SQUARE_CORNER_VELOCITY={:.5f}\n"            # Set maximum velocity values for unretract move                                        
                         "G91\n"
                         "G1 Z-{:.5f}\n"                                                                 # If ramp move was used or standard or helix move were done, un_zhop
-                    ).format(self.safe_z_hop_height)
+                    ).format(self.max_vel, self.max_sqv, self.safe_z_hop_height)
                 
                 unretract_gcode += (
                     "G1 E{:.5f} F{}\n"                                                                  # Unretract filament
