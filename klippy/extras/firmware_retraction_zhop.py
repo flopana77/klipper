@@ -100,10 +100,10 @@ class FirmwareRetraction:
             retract_gcode = (
                 "SAVE_GCODE_STATE NAME=_retract_state\n"
                 "G91\n"
-                "SET_VELOCITY_LIMIT ACCEL={:.5f} ACCEL_TO_DECEL={:.5f}\n"                               # Set maximum acceleration values for retraction move
+                "M204 S{:.5f}\n"                                                                        # Set maximum acceleration values for retraction move
                 "G1 E-{:.5f} F{}\n"                                                                     # Retract filament at retract speed
                 "G90\n"                                                                                 # Switch to absolute mode (just in case the gcode would be relative for some reason) given that the following commands are in absolute mode
-            ).format(self.max_acc, self.max_acc_to_decel, self.retract_length, int(self.retract_speed * 60))
+            ).format(self.max_acc, self.retract_length, int(self.retract_speed * 60))
 
             if self.z_hop_height > 0.0:                                                                 # Include move command if z_hop_height greater 0 depending on z_hop_style
                 self._set_safe_zhop_params()                                                            # Set safe zhop parameters to prevent out-of-range moves when canceling or finishing print while retracted
@@ -152,8 +152,8 @@ class FirmwareRetraction:
                 self._save_acc_vel_state()                                                              # Save current acceleration and valocity settings
                 unretract_gcode = (
                     "SAVE_GCODE_STATE NAME=_unretract_state\n"
-                    "SET_VELOCITY_LIMIT ACCEL={:.5f} ACCEL_TO_DECEL={:.5f}\n"                           # Set maximum acceleration values for unretract filament and motion system move
-                    ).format(self.max_acc, self.max_acc_to_decel) 
+                    "M204 S{:.5f}\n"                                                                    # Set maximum acceleration values for unretract filament and motion system move
+                    ).format(self.max_acc) 
                 
                 if self.z_hop_height > 0.0 and self.ramp_move:                                          # Include move command only if z_hop enabled
                     self.ramp_move = False                                                              # Reset ramp move flag if not used in previous move
@@ -166,8 +166,8 @@ class FirmwareRetraction:
                 
                 unretract_gcode += (
                     "G1 E{:.5f} F{}\n"                                                                  # Unretract filament
-                    "SET_VELOCITY_LIMIT VELOCITY={:.5f} ACCEL={:.5f} ACCEL_TO_DECEL={:.5f} SQUARE_CORNER_VELOCITY={:.5f}\n" # Restore previous accel and speed value limits
-                    "RESTORE_GCODE_STATE NAME=_unretract_state"                                         # Restore gcode state, velocity and acceleration values
+                    "SET_VELOCITY_LIMIT VELOCITY={:.5f} ACCEL={:.5f} ACCEL_TO_DECEL={:.5f} SQUARE_CORNER_VELOCITY={:.5f}\n" # Restore previous accel values and speed value limits
+                    "RESTORE_GCODE_STATE NAME=_unretract_state"                                         # Restore gcode state and velocity values
                 ).format(self.unretract_length, int(self.unretract_speed * 60), self.acc_vel_state[0], self.acc_vel_state[1], self.acc_vel_state[2], self.acc_vel_state[3])                         
                 
                 self.gcode.run_script_from_command(unretract_gcode)                                     # Use the G-code script to save the current state, move the filament, and restore the state
