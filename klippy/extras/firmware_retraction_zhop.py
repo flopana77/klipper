@@ -115,11 +115,11 @@ class FirmwareRetraction:
                     retract_gcode += (
                         "G17\n"                                                                         # Set XY plane for 360 degree arc move (including z move results in a helix)
                         "G2 Z{:.5f} I-1.22 J0.0 F{}\n"                                                  # Set 80% of maximum speed for retraction move. Z speed limit will be enforces by the firmware if set
-                    ).format(self.z_hop_Z, int(RETRACTION_MOVE_SPEED_FRACTION * self.max_velocity * 60))
+                    ).format(self.z_hop_Z, int(RETRACTION_MOVE_SPEED_FRACTION * self.max_vel * 60))
                 elif self.z_hop_style == 'standard':                                                    # Standard vertical move with enabled z_hop_height
                     retract_gcode += (
                         "G1 Z{:.5f} F{}\n"                                                              # Set 80% of maximum speed for retraction move. Z speed limit will be enforces by the firmware if set
-                    ).format(self.z_hop_Z, int(RETRACTION_MOVE_SPEED_FRACTION * self.max_velocity * 60))
+                    ).format(self.z_hop_Z, int(RETRACTION_MOVE_SPEED_FRACTION * self.max_vel * 60))
                 elif self.z_hop_style == 'ramp':                                                        # Ramp move: z_hop performed during first G1 move after retract command
                     self.ramp_move = True                                                               # Set flag to trigger ramp move in the next G1 command
                 
@@ -162,7 +162,7 @@ class FirmwareRetraction:
                         "SET_VELOCITY_LIMIT VELOCITY={:.5f} SQUARE_CORNER_VELOCITY={:.5f}\n"            # Set maximum velocity values for unretract move
                         "G91\n"
                         "G1 Z-{:.5f} F{}\n"                                                             # If ramp move was used or standard or helix move were done, un_zhop at 80% of maximum speed (to have a bit of a safety margin)
-                    ).format(self.max_vel, self.max_sqv, self.safe_z_hop_height, int(RETRACTION_MOVE_SPEED_FRACTION * self.max_velocity * 60))
+                    ).format(self.max_vel, self.max_sqv, self.safe_z_hop_height, int(RETRACTION_MOVE_SPEED_FRACTION * self.max_vel* 60))
                 
                 unretract_gcode += (
                     "G1 E{:.5f} F{}\n"                                                                  # Unretract filament
