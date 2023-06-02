@@ -1,8 +1,8 @@
 # Support for Marlin/Smoothie/Reprap style firmware retraction via G10/G11
 # Zhop funtionality includes:
-#   - Standard zhop (vertical move up, travel, vertical move down)
-#   - Diagonal zhop (travel move with vertical zhop component and vertical move down as proposed by the community)
-#   - Helix zhop (helix move up, travel, vertical move down as implemented as default by BambuLabs)
+#   - Standard zhop (vertical move up, travel, vertical move down),
+#   - Diagonal zhop (travel move with vertical zhop component and vertical move down as proposed by the community),
+#   - Helix zhop (helix move up, travel, vertical move down as implemented as default by BambuLabs).
 #
 # Copyright (C) 2023  Florian-Patrice Nagel <flopana77@gmail.com>
 #
