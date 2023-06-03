@@ -1518,7 +1518,7 @@ allowing per-filament settings and runtime tuning.
 #unretract_extra_length: 0.0
 #   The *additional* length (in mm) to add or the length to subtract
 #   from the filament move when unretracting compared to the retract 
-#   move length. This allows priming the nozzel (positive extra length) 
+#   move length. This allows priming the nozzle (positive extra length) 
 #   or delaying extrusion after unretracting (negative length). The 
 #   latter may help reduce blobbing. The minimum value is -1 mm 
 #   (2.41 mm3 volume), the default value is 0 mm.
@@ -1538,8 +1538,8 @@ allowing per-filament settings and runtime tuning.
 #   'Standard' corresponds to a simple vertical lift movement. 'Helix' 
 #   combines the vertical lift movement with a circular movement of 
 #   the nozzle. This increases the effective move length during nozzle 
-#   lifting and therefore thinner strings that break faster. It may 
-#   therefore be beneficial for oozy filaments and is the standard 
+#   lifting and therefore produces thinner strings that break faster. It  
+#   may therefore be beneficial for oozy filaments and is the standard 
 #   setting in BambuStudio. 'Ramp' does not immediately cause the 
 #   nozzle to lift vertically upon retraction but instead adds the 
 #   corresponding vertical movement component to the travel move 
