@@ -365,7 +365,7 @@ class FirmwareRetraction:
     # (must accept all arguments passed from event handlers)
     def _evaluate_retraction(self, *args):
         if self.is_retracted:                               # Check if retracted
-                if self.vsdcard_paused == True:  # Check if VSDCard print paused
+                if self.vsdcard_paused:          # Check if VSDCard print paused
                     # Reset paused flag and hence do not clear retraction on
                     # resume command.
                     self.vsdcard_paused = False
@@ -413,7 +413,7 @@ class FirmwareRetraction:
         self.stored_set_retraction_gcmds = []       # Reset list of stored comms
         # Reset retraction parameters to config values.
         # Can be disabled in config but not in set_retraction
-        if self.config_params_on_clear == True:
+        if self.config_params_on_clear:
             self._get_config_params()
 
     ################################################ Helper to get homing status
@@ -487,7 +487,7 @@ class FirmwareRetraction:
             if not 'Z' in params:
                 # If the first move after retract does not have a Z parameter,
                 # add parameter to force ramp move
-                if is_relative == True:
+                if is_relative:
                     # In relative mode
                     params['Z'] = str(self.safe_z_hop_height)
                 else:
@@ -499,7 +499,7 @@ class FirmwareRetraction:
                 # of the ramp move (works the same in rel and abs mode)
                 params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
         elif 'Z' in params:
-            if is_relative == False:
+            if not is_relative:
                 # In absolute mode, adjust the Z value to account for the Z-hop
                 # offset after retract and ramp move (if applicable)
                 params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
