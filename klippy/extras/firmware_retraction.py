@@ -34,11 +34,6 @@ class FirmwareRetraction:
         self.is_retracted = False                           # Retract state flag
         self.ramp_move = False                                  # Ramp move flag
         self.vsdcard_paused = False                         # VSDCard pause flag
-        if self.config_ref.getsection('virtual_sdcard') is not None:
-            self.vsdcard_enabled = True                   # VSD Card enable flag
-        else:
-            self.vsdcard_enabled = False
-
         self.stored_set_retraction_gcmds = []  # List for delayed SET_RETRACTION
         self.acc_vel_state = []                # List for accel and vel settings
 
@@ -275,8 +270,6 @@ class FirmwareRetraction:
         self.gcode_move = self.printer.lookup_object('gcode_move')
         self.toolhead = self.printer.lookup_object('toolhead')
         self.extruder = self.printer.lookup_object('extruder')
-        if self.vsdcard_enabled:         # Get ref to VSD Card object if enabled
-            self.vsdcard = self.printer.lookup_object('virtual_sdcard')
 
         # Register new G-code commands for setting/retrieving retraction
         # parameters and clearing retraction
@@ -322,8 +315,11 @@ class FirmwareRetraction:
         ################# Virtual SD card mode (Default for Mainsail, Fluidd and
         # DWC2-to-Klipper. Also possible via OctoPrint) Printing via virtual SD
         # Card is recommended as start, cancel and finish print can be detected
-        # more reliably!
-        if self.vsdcard_enabled:
+        # more reliably! If Virtual SD Card is avilable, additional events can
+        # be used to track the state of the printer.
+        if self.config_ref.getsection('virtual_sdcard') is not None:
+            # Get ref to VSD Card object
+            self.vsdcard = self.printer.lookup_object('virtual_sdcard')
             # Print is started: If started using the SDCARD_PRINT_FILE command,
             # any previously loaded file is reset first. Hence, the rest_file
             # event indicates a starting print. If instead a file is loaded
