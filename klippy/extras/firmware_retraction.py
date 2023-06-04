@@ -194,6 +194,7 @@ class FirmwareRetraction:
                 unretract_gcode = (
                     "SAVE_GCODE_STATE NAME=_unretract_state\n"
                     "M204 S{:.5f}\n"          # Set max accel for unretract move
+                    "G91\n"
                     ).format(self.max_acc)
 
                 # Incl move command only if z_hop enabled and ramp move was used
@@ -203,7 +204,6 @@ class FirmwareRetraction:
                     unretract_gcode += (
                         "SET_VELOCITY_LIMIT VELOCITY={:.5f} \
                             SQUARE_CORNER_VELOCITY={:.5f}\n"       # Set max vel
-                        "G91\n"
                         "G1 Z-{:.5f} F{}\n"
                     ).format(self.max_vel, self.max_sqv, \
                         self.safe_z_hop_height, \
