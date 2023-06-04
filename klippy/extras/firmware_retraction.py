@@ -254,11 +254,11 @@ class FirmwareRetraction:
             'z_hop_style', default='standard').strip().lower()
         self._check_z_hop_style()   # Safe guard that zhop style is properly set
         # verbose to enable/disable user messages
-        self.verbose = self.config_ref.get('verbose', default=False)
+        self.verbose = self.config_ref.getboolean('verbose', False)
         # Control retraction parameter behaviour when retraction is cleared.
         # Default is to reset retraction parameters to config values.
-        self.config_params_on_clear = self.config_ref.get(\
-            'config_params_on_clear', default=True)
+        self.config_params_on_clear = self.config_ref.getboolean(\
+            'config_params_on_clear', True)
 
     ################### Helper to check that z_hop_style was input and is valid.
     def _check_z_hop_style(self):
