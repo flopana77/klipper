@@ -362,7 +362,7 @@ class FirmwareRetraction:
     # (must accept all arguments passed from event handlers)
     def _evaluate_retraction(self, *args):
         if self.is_retracted:                               # Check if retracted
-                if self.vsdcard_paused:       # Check if VSDCard print is paused
+                if self.vsdcard_paused == True:  # Check if VSDCard print paused
                     # Reset paused flag and hence do not clear retraction on
                     # resume command.
                     self.vsdcard_paused = False
@@ -399,9 +399,12 @@ class FirmwareRetraction:
 
     ################################################# Helper to clear retraction
     def _execute_clear_retraction(self):
-        # Re-establish regular G1 command.
-        # zhop will be reversed on next move with z coordinate
-        self._re_register_G1()
+        if self.z_hop_height > 0.0:
+            # Re-establish regular G1 command if zhop enabled.
+            # zhop will be reversed on next move with z coordinate
+            # Note that disabling zhop while retracted id not possible as the
+            # SET_RETRACTION command will not execute while retracted.
+            self._re_register_G1()
         self.is_retracted = False     # Reset retract flag to enable G10 command
         self.ramp_move = False                            # Reset ramp move flag
         self.stored_set_retraction_gcmds = []       # Reset list of stored comms
@@ -469,7 +472,7 @@ class FirmwareRetraction:
             self.gcode.register_command(new_cmd_name, prev_cmd, \
                 desc=new_cmd_desc)  # Register untoggled method to untog handler
 
-    ### G1 method that accounts for z-hop by altering the z-coordinates.
+    ############ G1 method that accounts for z-hop by altering the z-coordinates
     # Offsets are not touched to prevent incompatibility issues with user macros
     def _G1_zhop(self,gcmd):
         params = gcmd.get_command_parameters()
