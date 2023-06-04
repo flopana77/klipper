@@ -101,7 +101,7 @@ class FirmwareRetraction:
 
     ########################### Gcode Command G10 to perform firmware retraction
     def cmd_G10(self, gcmd):
-        retract_gcode = ""                              # Reset unretract string
+        retract_gcode = ""                                # Reset retract string
         homing_status = self._get_homing_status()          # Check homing status
         if 'xyz' not in homing_status: # If printer is not homed, ignore command
             if self.verbose: gcmd.respond_info('Printer is not homed. \
