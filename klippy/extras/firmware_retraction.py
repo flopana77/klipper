@@ -82,10 +82,13 @@ class FirmwareRetraction:
                              self.z_hop_height, self.z_hop_style, 
                              self.is_retracted, self.ramp_move ))
 
-        if self.stored_set_retraction_gcmds:                                                            # List queued SET_RETRACTION commands if applicable
-            for i, stored_gcmd in reversed(list(enumerate(self.stored_set_retraction_gcmds))):
-                params = ' '.join(f'{k} = {v}' for k, v in stored_gcmd.get_command_parameters().items())
-                gcmd.respond_info('Stored command #%d: SET_RETRACTION %s' % (i + 1, params))            # Formatting to make the stored command look like input
+        if self.stored_set_retraction_gcmds:#List queued SET_RETRACTION commands
+            for i, stored_gcmd in reversed(list(enumerate(\
+                    self.stored_set_retraction_gcmds))):
+                params = ' '.join(f'{k} = {v}' for k, v in \
+                    stored_gcmd.get_command_parameters().items())
+                gcmd.respond_info('Stored command #%d: SET_RETRACTION %s' % \
+                    (i + 1, params))                    # Format stored commands
 
     ##### Command to clear FW retraction (add to CANCEL macros at the beginning)
     cmd_CLEAR_RETRACTION_help = ('Clear retraction state without retract move \
@@ -103,57 +106,71 @@ class FirmwareRetraction:
 
     ########################### Gcode Command G10 to perform firmware retraction
     def cmd_G10(self, gcmd):
-        homing_status = self._get_homing_status()                                                       # Check homing status
-        if 'xyz' not in homing_status:                                                                  # If printer is not homed, ignore command
+        homing_status = self._get_homing_status()          # Check homing status
+        if 'xyz' not in homing_status: # If printer is not homed, ignore command
             if self.verbose: gcmd.respond_info('Printer is not homed. \
                 Command ignored!')
-        elif not self.extruder.heater.can_extrude:                                                      # Check if extruder is above min. extrude temperature
+        elif not self.extruder.heater.can_extrude:   # Check extruder min. temp.
             if self.verbose: gcmd.respond_info('Extruder temperature too low. \
                 Command ignored!')
-        elif self.retract_length == 0.0:                                                                # Check if firmware retraction is enabled
+        elif self.retract_length == 0.0:        # Check if FW retraction enabled
             if self.verbose: gcmd.respond_info('Retraction length cero. \
                 Firmware retraction disabled. Command ignored!')
-        elif not self.is_retracted:                                                                     # If the filament isn't already retracted, build the G-Code string to retract
-            self._save_acc_vel_state()                                                                  # Save current acceleration and valocity settings
+        elif not self.is_retracted:  # If filament isn't retracted, build G-Code
+            self._save_acc_vel_state()     # Save current accel and vel settings
             retract_gcode = (
                 "SAVE_GCODE_STATE NAME=_retract_state\n"
                 "G91\n"
-                "M204 S{:.5f}\n"                                                                        # Set maximum acceleration values for retraction move
-                "G1 E-{:.5f} F{}\n"                                                                     # Retract filament at retract speed
-                "G90\n"                                                                                 # Switch to absolute mode (just in case the gcode would be relative for some reason) given that the following commands are in absolute mode
+                "M204 S{:.5f}\n"                # Set max accel for retract move
+                "G1 E-{:.5f} F{}\n"          # Retract filament at retract speed
+                "G90\n"                 # Switch to absolute mode (just in case)
             ).format(self.max_acc, self.retract_length,\
                 int(self.retract_speed * 60))
 
-            if self.z_hop_height > 0.0:                                                                 # Include move command if z_hop_height greater 0 depending on z_hop_style
-                self._set_safe_zhop_params()                                                            # Set safe zhop parameters to prevent out-of-range moves when canceling or finishing print while retracted
+            # Incl move command if z_hop_height>0 depending on z_hop_style
+            if self.z_hop_height > 0.0:
+                # Set safe zhop parameters to prevent out-of-range moves when
+                # canceling or finishing print while retracted
+                self._set_safe_zhop_params()
                 retract_gcode += (
-                    "SET_VELOCITY_LIMIT VELOCITY={:.5f} SQUARE_CORNER_VELOCITY={:.5f}\n"
-                    ).format(self.max_vel, self.max_sqv)                                                # Set maximum velocity limits for zhops (except for ramp move)
+                    "SET_VELOCITY_LIMIT VELOCITY={:.5f} \
+                        SQUARE_CORNER_VELOCITY={:.5f}\n"
+                    ).format(self.max_vel, self.max_sqv)     # Set max vel limit
 
-                if self.z_hop_style == 'helix':                                                         # --> ADD THE CODE FOR GETTING NEXT COORDINATE AND CALCULATE HELIX CENTER POINT HERE
+                if self.z_hop_style == 'helix':
+                    # --> ADD CODE HERE TO GET NEXT COORD TO CALC HELIX CENTER
                     retract_gcode += (
-                        "G17\n"                                                                         # Set XY plane for 360 degree arc move (including z coordinate results in a helix)
-                        "G2 Z{:.5f} I-1.22 J0.0 F{}\n"                                                  # Set 80% of maximum speed for retraction move. Z speed limit will be enforced by the firmware if set
+                        "G17\n" # Set XY plane for full arc (incl z for a helix)
+                        "G2 Z{:.5f} I-1.22 J0.0 F{}\n"
+                    ).format(self.z_hop_Z, int(RETRACTION_MOVE_SPEED_FRACTION *\
+                        self.max_vel * 60))      # Set 80% of max. vel for zhop.
+                                # Z speed limit will be enforced by the firmware
+                # Standard vertical move with enabled z_hop_height
+                elif self.z_hop_style == 'standard':
+                    retract_gcode += (
+                        "G1 Z{:.5f} F{}\n"
                     ).format(self.z_hop_Z, int(RETRACTION_MOVE_SPEED_FRACTION *\
                         self.max_vel * 60))
-                elif self.z_hop_style == 'standard':                                                    # Standard vertical move with enabled z_hop_height
-                    retract_gcode += (
-                        "G1 Z{:.5f} F{}\n"                                                              # Set 80% of maximum speed for retraction move. Z speed limit will be enforced by the firmware if set
-                    ).format(self.z_hop_Z, int(RETRACTION_MOVE_SPEED_FRACTION *\
-                        self.max_vel * 60))
-                elif self.z_hop_style == 'ramp':                                                        # Ramp move: z_hop performed during first G1 move after retract command
-                    self.ramp_move = True                                                               # Set flag to trigger ramp move in the next G1 command
+                # Ramp move: z_hop during 1st move after retract
+                elif self.z_hop_style == 'ramp':
+                    self.ramp_move = True #Set flag to ramp move in next G1 move
 
             retract_gcode += (
-                "SET_VELOCITY_LIMIT VELOCITY={:.5f} ACCEL={:.5f} ACCEL_TO_DECEL={:.5f} SQUARE_CORNER_VELOCITY={:.5f}\n" # Restore previous accel and speed value limits
-                "RESTORE_GCODE_STATE NAME=_retract_state"                                               # Restore gcode state, velocity and acceleration values
-                ).format(self.acc_vel_state[0], self.acc_vel_state[1], self.acc_vel_state[2], self.acc_vel_state[3])
+                # Restore previous accel and speed value limits
+                "SET_VELOCITY_LIMIT VELOCITY={:.5f} ACCEL={:.5f} \
+                    ACCEL_TO_DECEL={:.5f} SQUARE_CORNER_VELOCITY={:.5f}\n"
+                # Restore gcode state, velocity and acceleration values
+                "RESTORE_GCODE_STATE NAME=_retract_state"
+                ).format(self.acc_vel_state[0], self.acc_vel_state[1], \
+                    self.acc_vel_state[2], self.acc_vel_state[3])
 
-            self.gcode.run_script_from_command(retract_gcode)                                           # Use the G-code script to save the current state, move the filament, and restore the state
-            self.is_retracted = True                                                                    # Set the flag to indicate that the filament is retracted and activate G1 method with z-hop compensation
-            self.acc_vel_state =[]                                                                      # Reset acc and vel setting list
+            self.gcode.run_script_from_command(retract_gcode)
+            self.is_retracted = True        # Set the flag to filament retracted
+            self.acc_vel_state =[]              # Reset acc and vel setting list
 
-            if self.z_hop_height > 0.0:                                                                 # Swap original G1 handlers if z_hop enabled (z_hop_height greater 0) to offset all following moves in eiter absolute or relative mode
+            if self.z_hop_height > 0.0:
+                # Swap original G1 handlers if z_hop enabled to offset following
+                # moves in eiter absolute or relative mode
                 self._unregister_G1()
         else:
             if self.verbose: gcmd.respond_info('Printer is already in retract \
@@ -161,48 +178,63 @@ class FirmwareRetraction:
 
     ######################### GCode Command G11 to perform filament unretraction
     def cmd_G11(self, gcmd):
-        if self.retract_length == 0.0:                                                                  # Check if firmware retraction is enabled
+        if self.retract_length == 0.0:          # Check if FW retraction enabled
             if self.verbose: gcmd.respond_info('Retraction length cero. \
                 Firmware retraction disabled. Command ignored!')
-        elif self.is_retracted:                                                                         # Check if the filament is currently retracted
-            if not self.extruder.heater.can_extrude:                                                    # Check if extruder is above min. extrude temperature. If not, don't do retract move but clear_retraction to prevent damage to extruder/filament.
+        elif self.is_retracted:             # Check if the filament is retracted
+            # Check if extruder is above min. temperature. If not, don't retract
+            # but clear_retraction to prevent damage to extruder and/or filament
+            if not self.extruder.heater.can_extrude:
                 self._execute_clear_retraction()
                 if self.verbose: gcmd.respond_info('Extruder temperature low. \
                     Retraction cleared without retract move. zhop will be \
                     undone on next toolhead move.')
             else:
-                if self.z_hop_height > 0.0:                                                              # Restore original G1 handlers if z_hop enabled (z_hop_height greater 0)
+                if self.z_hop_height > 0.0:    # Restore G1 handlers if z_hop on
                     self._re_register_G1()
 
-                self._save_acc_vel_state()                                                              # Save current acceleration and valocity settings
+                self._save_acc_vel_state()         # Save accel and vel settings
                 unretract_gcode = (
                     "SAVE_GCODE_STATE NAME=_unretract_state\n"
-                    "M204 S{:.5f}\n"                                                                    # Set maximum acceleration values for unretract filament and motion system move
-                    ).format(self.max_acc) 
+                    "M204 S{:.5f}\n"          # Set max accel for unretract move
+                    ).format(self.max_acc)
 
-                if self.z_hop_height > 0.0 and self.ramp_move:                                          # Include move command only if z_hop enabled
-                    self.ramp_move = False                                                              # Reset ramp move flag if not used in previous move
+                # Incl move command only if z_hop enabled and ramp move was used
+                if self.z_hop_height > 0.0 and self.ramp_move:
+                    self.ramp_move = False  # Reset ramp flag if not used before
                 elif self.z_hop_height > 0.0:
                     unretract_gcode += (
-                        "SET_VELOCITY_LIMIT VELOCITY={:.5f} SQUARE_CORNER_VELOCITY={:.5f}\n"            # Set maximum velocity values for unretract move
+                        "SET_VELOCITY_LIMIT VELOCITY={:.5f} \
+                            SQUARE_CORNER_VELOCITY={:.5f}\n"       # Set max vel
                         "G91\n"
-                        "G1 Z-{:.5f} F{}\n"                                                             # If ramp move was used or standard or helix move were done, un_zhop at 80% of maximum speed (to have a bit of a safety margin)
-                    ).format(self.max_vel, self.max_sqv, self.safe_z_hop_height, int(RETRACTION_MOVE_SPEED_FRACTION * self.max_vel* 60))
+                        "G1 Z-{:.5f} F{}\n"
+                    ).format(self.max_vel, self.max_sqv, \
+                        self.safe_z_hop_height, \
+                        int(RETRACTION_MOVE_SPEED_FRACTION * self.max_vel* 60))
+                        # If ramp move was used or standard or helix move were
+                        # done, un_zhop at 80% of maximum speed (to have a bit
+                        # of a safety margin)
 
                 unretract_gcode += (
-                    "G1 E{:.5f} F{}\n"                                                                  # Unretract filament
-                    "SET_VELOCITY_LIMIT VELOCITY={:.5f} ACCEL={:.5f} ACCEL_TO_DECEL={:.5f} SQUARE_CORNER_VELOCITY={:.5f}\n" # Restore previous accel values and speed value limits
-                    "RESTORE_GCODE_STATE NAME=_unretract_state"                                         # Restore gcode state and velocity values
-                ).format(self.unretract_length, int(self.unretract_speed * 60), self.acc_vel_state[0], self.acc_vel_state[1], self.acc_vel_state[2], self.acc_vel_state[3])
+                    "G1 E{:.5f} F{}\n"                      # Unretract filament
+                    "SET_VELOCITY_LIMIT VELOCITY={:.5f} ACCEL={:.5f} \
+                        ACCEL_TO_DECEL={:.5f} \
+                        SQUARE_CORNER_VELOCITY={:.5f}\n"
+                          # Restore previous accel values and speed value limits
+                    "RESTORE_GCODE_STATE NAME=_unretract_state"
+                ).format(self.unretract_length, int(self.unretract_speed * 60),\
+                    self.acc_vel_state[0], self.acc_vel_state[1], \
+                    self.acc_vel_state[2], self.acc_vel_state[3])
 
-                self.gcode.run_script_from_command(unretract_gcode)                                     # Use the G-code script to save the current state, move the filament, and restore the state
-                self.is_retracted = False                                                               # Set the flag to indicate that the filament is not retracted and erase ramp move flag (if not used)
-                self.acc_vel_state =[]                                                                  # Reset acc and vel setting list
+                self.gcode.run_script_from_command(unretract_gcode)
+                self.is_retracted = False # Set the flag to filament unretracted
+                self.acc_vel_state =[]          # Reset acc and vel setting list
 
-                if self.stored_set_retraction_gcmds:                                                    # If any SET_RETRACTION commands were stored, execute them now
+                # If any SET_RETRACTION commands were stored, execute them now
+                if self.stored_set_retraction_gcmds:
                     for stored_gcmd in self.stored_set_retraction_gcmds:
                         self._execute_set_retraction(stored_gcmd)
-                    self.stored_set_retraction_gcmds=[]                                                 # Reset list of stored commands
+                    self.stored_set_retraction_gcmds=[] #Reset stored comms list
         else:
             if self.verbose: gcmd.respond_info('Printer is not retracted. \
                 Command ignored!')
@@ -217,14 +249,18 @@ class FirmwareRetraction:
             'unretract_extra_length', 0., minval=-1.)
         self.unretract_speed = self.config_ref.getfloat(\
             'unretract_speed', 10., minval=1.)
+        # Zero min. and standard val to ensure compatibility with macros
         self.z_hop_height = self.config_ref.getfloat(\
-            'z_hop_height', 0., minval=0.)                     # z_hop_height with 0mm minimum...Standard value is cero to prevent any incompatibility issues on merge
+            'z_hop_height', 0., minval=0.)
         self.z_hop_style = self.config_ref.get(\
-            'z_hop_style', default='standard').strip().lower()       # z_hop_style, "standard", "ramp" or "helix" for BambuStudio style zhop. format all lower case and define valid inputs.
-        self._check_z_hop_style()                                                                       # Safe guard that zhop style is properly set
-        self.verbose = self.config_ref.get('verbose', default=False)                                    # verbose to enable/disable user messages
+            'z_hop_style', default='standard').strip().lower()
+        self._check_z_hop_style()   # Safe guard that zhop style is properly set
+        # verbose to enable/disable user messages
+        self.verbose = self.config_ref.get('verbose', default=False)
+        # Control retraction parameter behaviour when retraction is cleared.
+        # Default is to reset retraction parameters to config values.
         self.config_params_on_clear = self.config_ref.get(\
-            'config_params_on_clear', default=True)       # Control retraction parameter behaviour when retraction is cleared. Default is to reset retraction parameters to config values.
+            'config_params_on_clear', default=True)
 
     ################### Helper to check that z_hop_style was input and is valid.
     def _check_z_hop_style(self):
@@ -235,12 +271,12 @@ class FirmwareRetraction:
 
     ######## Helper method to register commands and instantiate required objects
     def _handle_ready(self):
-        self.gcode = self.printer.lookup_object('gcode')                                                # Get a reference to the gcode object
-        self.gcode_move = self.printer.lookup_object('gcode_move')                                      # Get a reference to the gcode_move object
-        self.toolhead = self.printer.lookup_object('toolhead')                                          # Get a reference to the toolhead object
-        self.extruder = self.printer.lookup_object('extruder')                                          # Get a reference to the extruder object
-        if self.vsdcard_enabled:
-            self.vsdcard = self.printer.lookup_object('virtual_sdcard')                                 # Get a reference to the virtual SD Card object if enabled
+        self.gcode = self.printer.lookup_object('gcode')
+        self.gcode_move = self.printer.lookup_object('gcode_move')
+        self.toolhead = self.printer.lookup_object('toolhead')
+        self.extruder = self.printer.lookup_object('extruder')
+        if self.vsdcard_enabled:         # Get ref to VSD Card object if enabled
+            self.vsdcard = self.printer.lookup_object('virtual_sdcard')
 
         # Register new G-code commands for setting/retrieving retraction
         # parameters and clearing retraction
@@ -329,10 +365,13 @@ class FirmwareRetraction:
     ###### Helper method to evaluate to clear retraction if certain events occur
     # (must accept all arguments passed from event handlers)
     def _evaluate_retraction(self, *args):
-        if self.is_retracted:                                                                           # Check if retracted
-                if self.vsdcard_paused:                                                                 # Check if VSDCard print is paused
-                    self.vsdcard_paused = False                                                         # Reset paused flag and hence do not clear retraction on resume command. If cancel command triggered a pause event, clear retraction.
+        if self.is_retracted:                               # Check if retracted
+                if self.vsdcard_paused:       # Check if VSDCard print is paused
+                    # Reset paused flag and hence do not clear retraction on
+                    # resume command.
+                    self.vsdcard_paused = False
                 else:
+                    # If cancel command triggered pause event, clear retraction.
                     self._execute_clear_retraction()
 
     ########### Helper method to reset pause flags and force evaluate retraction
@@ -346,27 +385,38 @@ class FirmwareRetraction:
 
     ################### Helper to set retraction parameters if command is called
     def _execute_set_retraction(self,gcmd):
-        self.retract_length = gcmd.get_float('RETRACT_LENGTH', self.retract_length, minval=0.)
-        self.retract_speed = gcmd.get_float('RETRACT_SPEED', self.retract_speed, minval=1.)
-        self.unretract_extra_length = gcmd.get_float('UNRETRACT_EXTRA_LENGTH', self.unretract_extra_length, minval=0.)
-        self.unretract_speed = gcmd.get_float('UNRETRACT_SPEED', self.unretract_speed, minval=1.)
-        self.z_hop_height = gcmd.get_float('Z_HOP_HEIGHT', self.z_hop_height, minval=0.)                # Added back z_hop_height with 0mm minimum
-        self.z_hop_style = gcmd.get('Z_HOP_STYLE', self.z_hop_style).strip().lower()
+        self.retract_length = gcmd.get_float('RETRACT_LENGTH', \
+            self.retract_length, minval=0.)
+        self.retract_speed = gcmd.get_float('RETRACT_SPEED', \
+            self.retract_speed, minval=1.)
+        self.unretract_extra_length = gcmd.get_float('UNRETRACT_EXTRA_LENGTH', \
+            self.unretract_extra_length, minval=0.)
+        self.unretract_speed = gcmd.get_float('UNRETRACT_SPEED', \
+            self.unretract_speed, minval=1.)
+        self.z_hop_height = gcmd.get_float('Z_HOP_HEIGHT', self.z_hop_height, \
+            minval=0.)      # z_hop_height with 0mm min. to prevent nozzle crash
+        self.z_hop_style = gcmd.get('Z_HOP_STYLE', \
+            self.z_hop_style).strip().lower()
         self._check_z_hop_style()
-        self.unretract_length = (self.retract_length + self.unretract_extra_length)
+        self.unretract_length = (self.retract_length + \
+            self.unretract_extra_length)
 
     ################################################# Helper to clear retraction
     def _execute_clear_retraction(self):
-        self._re_register_G1()                                                                          # Re-establish regular G1 command. zhop will be reversed on next move with z coordinate
-        self.is_retracted = False                                                                       # Remove retract flag to enable new retraction move
-        self.ramp_move = False                                                                          # Remove ramp move flag to enable new retraction move
-        self.stored_set_retraction_gcmds = []                                                           # Reset list of stored commands
+        # Re-establish regular G1 command.
+        # zhop will be reversed on next move with z coordinate
+        self._re_register_G1()
+        self.is_retracted = False     # Reset retract flag to enable G10 command
+        self.ramp_move = False                            # Reset ramp move flag
+        self.stored_set_retraction_gcmds = []       # Reset list of stored comms
+        # Reset retraction parameters to config values.
+        # Can be disabled in config but not in set_retraction
         if self.config_params_on_clear:
-            self._get_config_params()                                                                   # Reset retraction parameters to config values. Can be disabled in config but not in set_retraction
+            self._get_config_params()
 
     ################################################ Helper to get homing status
     def _get_homing_status(self):
-        curtime = self.printer.get_reactor().monotonic()                                                # Check if Z axis is homed
+        curtime = self.printer.get_reactor().monotonic() # Check if Z axis homed
         kin_status = self.toolhead.get_kinematics().get_status(curtime)
         return kin_status['homed_axes']
 
@@ -377,18 +427,20 @@ class FirmwareRetraction:
             self.toolhead.max_velocity,
             self.toolhead.max_accel,
             self.toolhead.max_accel_to_decel,
-            self.toolhead.square_corner_velocity]                                                       # Save current velocity, acceleration, accel_to_decel, square_corner_vel
+            self.toolhead.square_corner_velocity]
 
     ### Helper to evaluate max. possible zhop height to stay within build volume
     def _set_safe_zhop_params(self):
         self.currentZ = self._get_gcode_zpos()
 
-        if self.currentZ + self.z_hop_height > self.max_z:                                              # Set safe z_hop height to prevent out-of-range moves. Variable used in zhop-G1 command
+        # Set safe z_hop height to prevent out-of-range moves.
+        # Variables is used in zhop-G1 command
+        if self.currentZ + self.z_hop_height > self.max_z:
             self.safe_z_hop_height = self.max_z - self.currentZ
         else:
             self.safe_z_hop_height = self.z_hop_height
 
-        self.z_hop_Z = self.currentZ + self.safe_z_hop_height                                           # Set safe z_hop position to prevent out-of-range moves
+        self.z_hop_Z = self.currentZ + self.safe_z_hop_height
 
     ####################################### Helper to get current gcode position
     def _get_gcode_zpos(self):
@@ -407,7 +459,8 @@ class FirmwareRetraction:
     ##################### Helper to toggle/untoggle command handlers and methods
     def _toggle_gcode_comms(self, new_cmd_name, old_cmd_name, new_cmd_func, \
         new_cmd_desc, toggle_state):
-        prev_cmd = self.gcode.register_command(old_cmd_name, None)                                      # Unregister the current command method from the current command handler and store in prev_cmd
+        # Unregister current method from current handler and store in prev_cmd
+        prev_cmd = self.gcode.register_command(old_cmd_name, None)
         pdesc = 'Renamed builtin of "%s"' % old_cmd_name
         if not toggle_state:
             # Register prev method to toggled handler, indicate built-in command
@@ -415,7 +468,8 @@ class FirmwareRetraction:
             self.gcode.register_command(old_cmd_name, new_cmd_func, \
                 desc=new_cmd_desc)  # Register toggled method to command handler
         else:
-            self.gcode.register_command(new_cmd_name, new_cmd_func)                                     # Unregister the toggled command method from the untoggled command handler
+            # Unregister toggled command from the untoggled handler
+            self.gcode.register_command(new_cmd_name, new_cmd_func)
             self.gcode.register_command(new_cmd_name, prev_cmd, \
                 desc=new_cmd_desc)  # Register untoggled method to untog handler
 
@@ -425,20 +479,32 @@ class FirmwareRetraction:
         params = gcmd.get_command_parameters()
         is_relative = self._toolhead_is_relative()
 
-        if self.ramp_move:                                                                              # Check if ramp flag set and thus move is a ramp move
-            self.ramp_move = False                                                                      # Reset flag
+         # Check if ramp flag set and thus move is a ramp move
+        if self.ramp_move:
+            self.ramp_move = False                             # Reset ramp flag
             if not 'Z' in params:
-                if is_relative == True:                                                                 # If the first move after retract does not have a Z parameter, add parameter equal to z_hop_Z(absolute)/safe_z_hop_height(relative) to create ramp move
-                    params['Z'] = str(self.safe_z_hop_height)                                           # Toolhead movement in relative mode
+                # If the first move after retract does not have a Z parameter,
+                # add parameter to force ramp move
+                if is_relative == True:
+                    # In relative mode
+                    params['Z'] = str(self.safe_z_hop_height)
                 else:
-                    params['Z'] = str(self.z_hop_Z)                                                     # Toolhead movement in absolute mode
+                    # In absolute mode
+                    params['Z'] = str(self.z_hop_Z)
             else:
-                params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)                          # If the first move after retract does have a Z parameter, simply adjust the Z value to account for the additonal Z-hop offset of the ramp move
+                # If the first move after retract does have a Z parameter,
+                # adjust the Z value to account for the additonal Z-hop offset
+                # of the ramp move (works the same in rel and abs mode)
+                params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
         elif 'Z' in params:
-            if is_relative == False:                                                                    # In absolute mode, adjust the Z value to account for the Z-hop offset after retract and ramp move (if applicable)
-                params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)                          # In relative mode, don't adjust z params given that the zhop offset is already considered in a previous move
+            if is_relative == False:
+                # In absolute mode, adjust the Z value to account for the Z-hop
+                # offset after retract and ramp move (if applicable)
+                params['Z'] = str(float(params['Z']) + self.safe_z_hop_height)
+                # Note, in relative mode, don't adjust z params given that the
+                # zhop offset was already considered in a previous move
 
-        new_g1_command = 'G1.20140114'                                                                  # Reconstruct the G1 command with adjusted parameters
+        new_g1_command = 'G1.20140114'
         for key, value in params.items():
             new_g1_command += f' {key}{value}'
 
