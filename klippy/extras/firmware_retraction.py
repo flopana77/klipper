@@ -198,6 +198,7 @@ class FirmwareRetraction:
                     ).format(self.max_acc)
 
                 # Incl move command only if z_hop enabled and ramp move was used
+                # This is a move in relative mode, which was already set
                 if self.z_hop_height > 0.0 and self.ramp_move:
                     self.ramp_move = False  # Reset ramp flag if not used before
                 elif self.z_hop_height > 0.0:
