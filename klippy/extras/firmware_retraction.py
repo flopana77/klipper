@@ -79,7 +79,7 @@ class FirmwareRetraction:
                           ' RETRACTED=%s RAMP_MOVE=%s'
                           % (self.retract_length, self.retract_speed,
                              self.unretract_extra_length, self.unretract_speed,
-                             self.z_hop_height, self.z_hop_style, 
+                             self.z_hop_height, self.z_hop_style,
                              self.is_retracted, self.ramp_move ))
 
         if self.stored_set_retraction_gcmds:#List queued SET_RETRACTION commands
