@@ -306,9 +306,11 @@ class TMCCommandHelper:
             prev_cur, prev_hold_cur, req_hold_cur, max_cur = ch.get_current()
         # Report values
         if prev_hold_cur is None:
-            if verbose_msg: gcmd.respond_info("Run Current: %0.2fA" % (prev_cur,))
+            if verbose_msg: gcmd.respond_info("Run Current: %0.2fA" % \
+                (prev_cur,))
         else:
-            if verbose_msg: gcmd.respond_info("Run Current: %0.2fA Hold Current: %0.2fA"
+            if verbose_msg: gcmd.respond_info("Run Current: %0.2fA \
+                Hold Current: %0.2fA"
                               % (prev_cur, prev_hold_cur))
     # Stepper phase tracking
     def _get_phases(self):

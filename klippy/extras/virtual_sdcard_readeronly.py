@@ -2,7 +2,8 @@ import os, io
 
 class VirtualSD:
     def __init__(self, config):
-        sd = "C:\\Users\\flopana\\Dropbox (Personal)\\3D Print\\AllPro3D_GIT\\klipper"
+        sd = "C:\\Users\\flopana\\Dropbox (Personal)\\3D Print\\AllPro3D_GIT\\\
+            klipper"
         self.sdcard_dirname = os.path.normpath(os.path.expanduser(sd))
         self.current_file = "FW_Retraction_Input.gcode"
         self.file_position = self.file_size = 0
@@ -25,13 +26,13 @@ class VirtualSD:
         self.current_file = f
         self.file_position = 0
         self.file_size = fsize
-        
+
     # Background work timer
     def work_handler(self):
         self.current_file.seek(self.file_position)
         partial_input = ""
         lines = []
-        
+
         # Open Output file
         with open('FW_Retraction_Output.gcode', 'w') as output_file:
             # Read inout file and write output file
@@ -63,7 +64,7 @@ class VirtualSD:
                 self.file_position = self.next_file_position
             print("Done printing file")
             output_file.close()
-        
+
 vSD = VirtualSD({})
 
 # Call the `run` method to load the file
