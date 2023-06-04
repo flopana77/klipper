@@ -413,7 +413,7 @@ class FirmwareRetraction:
         self.stored_set_retraction_gcmds = []       # Reset list of stored comms
         # Reset retraction parameters to config values.
         # Can be disabled in config but not in set_retraction
-        if self.config_params_on_clear:
+        if self.config_params_on_clear == True:
             self._get_config_params()
 
     ################################################ Helper to get homing status
