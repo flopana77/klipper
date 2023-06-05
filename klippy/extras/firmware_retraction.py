@@ -320,7 +320,7 @@ class FirmwareRetraction:
         # Card is recommended as start, cancel and finish print can be detected
         # more reliably! If Virtual SD Card is avilable, additional events can
         # be used to track the state of the printer.
-        if self.config_ref.getsection('virtual_sdcard') is not None:
+        if self.config_ref.has_section('virtual_sdcard'):
             # Get ref to VSD Card object
             self.vsdcard = self.printer.lookup_object('virtual_sdcard')
             # Print is started: If started using the SDCARD_PRINT_FILE command,
