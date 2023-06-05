@@ -138,9 +138,10 @@ class FirmwareRetraction:
                     retract_gcode += (
                         "G17\n" # Set XY plane for full arc (incl z for a helix)
                         "G2 Z{:.5f} I-1.22 J0.0 F{}\n"
-                    ).format(self.z_hop_Z, int(RETRACTION_MOVE_SPEED_FRACTION *\
+                    ).format(self.z_hop_Z/2.0, int(RETRACTION_MOVE_SPEED_FRACTION *\
                         self.max_vel * 60))      # Set 80% of max. vel for zhop.
                                 # Z speed limit will be enforced by the firmware
+                    self.ramp_move = True
                 # Standard vertical move with enabled z_hop_height
                 elif self.z_hop_style == 'standard':
                     retract_gcode += (
