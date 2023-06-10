@@ -1693,6 +1693,8 @@ accelerometers (one may define any number of sections with an
 #   Default is 104 (0x68). If AD0 is high, it would be 0x69 instead.
 #i2c_mcu:
 #i2c_bus:
+#i2c_software_scl_pin:
+#i2c_software_sda_pin:
 #i2c_speed: 400000
 #   See the "common I2C settings" section for a description of the
 #   above parameters. The default "i2c_speed" is 400000.
@@ -2413,6 +2415,8 @@ sensor_type: BME280
 #   (0x77).
 #i2c_mcu:
 #i2c_bus:
+#i2c_software_scl_pin:
+#i2c_software_sda_pin:
 #i2c_speed:
 #   See the "common I2C settings" section for a description of the
 #   above parameters.
@@ -2458,6 +2462,8 @@ sensor_type:
 #   Default is 64 (0x40).
 #i2c_mcu:
 #i2c_bus:
+#i2c_software_scl_pin:
+#i2c_software_sda_pin:
 #i2c_speed:
 #   See the "common I2C settings" section for a description of the
 #   above parameters.
@@ -2491,6 +2497,8 @@ sensor_type: LM75
 #   (usually with jumpers or hard wired).
 #i2c_mcu:
 #i2c_bus:
+#i2c_software_scl_pin:
+#i2c_software_sda_pin:
 #i2c_speed:
 #   See the "common I2C settings" section for a description of the
 #   above parameters.
@@ -2898,6 +2906,8 @@ PCA9533 LED support. The PCA9533 is used on the mightyboard.
 #   the PCA9533/1, 99 for the PCA9533/2. The default is 98.
 #i2c_mcu:
 #i2c_bus:
+#i2c_software_scl_pin:
+#i2c_software_sda_pin:
 #i2c_speed:
 #   See the "common I2C settings" section for a description of the
 #   above parameters.
@@ -2919,6 +2929,8 @@ PCA9632 LED support. The PCA9632 is used on the FlashForge Dreamer.
 #   96, 97, 98, or 99.  The default is 98.
 #i2c_mcu:
 #i2c_bus:
+#i2c_software_scl_pin:
+#i2c_software_sda_pin:
 #i2c_speed:
 #   See the "common I2C settings" section for a description of the
 #   above parameters.
@@ -3665,6 +3677,8 @@ i2c_address:
 #   parameter must be provided.
 #i2c_mcu:
 #i2c_bus:
+#i2c_software_scl_pin:
+#i2c_software_sda_pin:
 #i2c_speed:
 #   See the "common I2C settings" section for a description of the
 #   above parameters.
@@ -3701,6 +3715,8 @@ prefix).
 #   is 96.
 #i2c_mcu:
 #i2c_bus:
+#i2c_software_scl_pin:
+#i2c_software_sda_pin:
 #i2c_speed:
 #   See the "common I2C settings" section for a description of the
 #   above parameters.
@@ -3971,6 +3987,8 @@ lcd_type:
 #   Set to either "ssd1306" or "sh1106" for the given display type.
 #i2c_mcu:
 #i2c_bus:
+#i2c_software_scl_pin:
+#i2c_software_sda_pin:
 #i2c_speed:
 #   Optional parameters available for displays connected via an i2c
 #   bus. See the "common I2C settings" section for a description of
@@ -4351,10 +4369,14 @@ i2c_address:
 #   113. This parameter must be provided.
 #i2c_mcu:
 #i2c_bus:
+#i2c_software_scl_pin:
+#i2c_software_sda_pin:
 #i2c_speed:
 #   See the "common I2C settings" section for a description of the
 #   above parameters.
 #i2c_bus:
+#i2c_software_scl_pin:
+#i2c_software_sda_pin:
 #   If the I2C implementation of your micro-controller supports
 #   multiple I2C busses, you may specify the bus name here. The
 #   default is to use the default micro-controller i2c bus.
@@ -4604,6 +4626,8 @@ via the `i2c_speed` parameter. All other Klipper micro-controllers use a
 #   The name of the micro-controller that the chip is connected to.
 #   The default is "mcu".
 #i2c_bus:
+#i2c_software_scl_pin:
+#i2c_software_sda_pin:
 #   If the micro-controller supports multiple I2C busses then one may
 #   specify the micro-controller bus name here. The default depends on
 #   the type of micro-controller.
