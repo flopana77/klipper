@@ -463,13 +463,11 @@ class FirmwareRetraction:
 
     ####### Helper to evaluate max. possible zhop height to prevent nozzle crash
     def _set_safe_zhop_unretract_params(self):
-        self.safe_z_hop_height = self.z_hop_height
-
         self.currentPos = self._get_gcode_pos()
         self.currentZ = self.currentPos[2]
         # Set safe z_hop height to prevent nozzle crashes
         # Variables is used in G11 command
-        if self.currentZ - self.z_hop_height > 0.0:
+        if self.currentZ - self.safe_z_hop_height < 0.0:
             self.safe_z_hop_height = -1.0 * self.currentZ
 
     ############# Helper to evaluate safe helix move to stay within build volume
