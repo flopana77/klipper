@@ -27,6 +27,9 @@ class FirmwareRetraction:
                                                           # Initialize variables
         self.unretract_length = (self.retract_length + \
             self.unretract_extra_length)
+        self.currentPos = []
+        self.currentX = 0.0
+        self.currentY = 0.0
         self.currentZ = 0.0
         self.z_hop_Z = 0.0                           # Z coordinate of zhop move
         self.safe_z_hop_height = self.z_hop_height #Zhop preventing out-of-range
@@ -136,6 +139,9 @@ class FirmwareRetraction:
 
                 if self.z_hop_style == 'helix':
                     # --> ADD CODE HERE TO GET NEXT COORD TO CALC HELIX CENTER
+                    
+                    
+                    
                     retract_gcode += (
                         "G17\n" # Set XY plane for full arc (incl z for a helix)
                         "G2 Z{:.5f} I-1.22 J0.0 F{}\n"
@@ -438,8 +444,8 @@ class FirmwareRetraction:
 
     ### Helper to evaluate max. possible zhop height to stay within build volume
     def _set_safe_zhop_params(self):
-        self.currentZ = self._get_gcode_zpos()
-
+        self.currentPos = self._get_gcode_pos()
+        self.currentZ = self.currentPos[2]
         # Set safe z_hop height to prevent out-of-range moves.
         # Variables is used in zhop-G1 command
         if self.currentZ + self.z_hop_height > self.max_z:
@@ -449,12 +455,18 @@ class FirmwareRetraction:
 
         self.z_hop_Z = self.currentZ + self.safe_z_hop_height
 
+    ############# Helper to evaluate safe helix move to stay within build volume
+    def _set_safe_helix_params(self):
+        self.currentPos = self._get_gcode_pos()
+        self.currentX = self.currentPos[0]
+        self.currentY = self.currentPos[1]
+
     ####################################### Helper to get current gcode position
-    def _get_gcode_zpos(self):
+    def _get_gcode_pos(self):
         # Get current gcode position for z_hop move if enabled
         gcodestatus = self.gcode_move.get_status()
         currentPos = gcodestatus['gcode_position']
-        return currentPos[2]
+        return currentPos#[2]
 
     ############################################ Register new G1 command handler
     def _unregister_G1(self):
