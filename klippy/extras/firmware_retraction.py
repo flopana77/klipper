@@ -299,9 +299,11 @@ class FirmwareRetraction:
         # GCode streaming
         ################ GCode streaming mode (most commonly done via OctoPrint)
         # Print is started:  Most start gcodes include a G28 command to home all
-        # axes, which is generally NOT repeated during printing. Using homing as
-        # an indicator to evaluate if a printjob has started. G28 requirement
-        # added in function description.
+        # axes, which is generally NOT repeated during printing. Using homing
+        # move as an indicator to evaluate if a printjob has started. G28
+        # requirement added in function description. Bz using homing_move rather
+        # than home_rails event, bed mesh calibration is also detected and
+        # and triggers clearing retract state.
         #
         # Print is canceled: On cancel, OctoPrint automatically disables
         # stepper, which allows identifying a canceled print.
@@ -312,7 +314,7 @@ class FirmwareRetraction:
         # disabled on host and firmware restart, thus triggering clear
         # retraction as well. Shutdown requires host and/or firmware restart,
         # thus also triggerung clear retraction.
-        self.printer.register_event_handler("homing:home_rails_begin", \
+        self.printer.register_event_handler("homing:homing_move_begin", \
             self._evaluate_retraction)
         self.printer.register_event_handler("stepper_enable:motor_off", \
             self._evaluate_retraction)
