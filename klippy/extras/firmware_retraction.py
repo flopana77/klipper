@@ -38,11 +38,15 @@ class FirmwareRetraction:
         self.ramp_move = False                                  # Ramp move flag
         self.vsdcard_paused = False                         # VSDCard pause flag
         self.G1_toggle_state = False                      # G1 toggle state flag
+        self.z_coord_check = False         # Z_hop move check only for cartesian
         self.stored_set_retraction_gcmds = []  # List for delayed SET_RETRACTION
         self.acc_vel_state = []                # List for accel and vel settings
 
-        zconfig = config.getsection('stepper_z')
-        self.max_z = zconfig.getfloat('position_max')
+        # Limit use of zhop only to cartesians
+        if self.config_ref.has_section('stepper_z'):
+            zconfig = config.getsection('stepper_z')
+            self.max_z = zconfig.getfloat('position_max')
+            self.z_coord_check = True
 
         printer_config = config.getsection('printer')
         self.max_vel = printer_config.getfloat('max_velocity')
@@ -130,8 +134,8 @@ class FirmwareRetraction:
             # Incl move command if z_hop_height>0 depending on z_hop_style
             if self.z_hop_height > 0.0:
                 # Set safe zhop parameters to prevent out-of-range moves when
-                # canceling or finishing print while retracted
-                self._set_safe_zhop_params()
+                # canceling or finishing print while retracted - Only Cartesian!
+                self._set_safe_zhop_retract_params()
                 retract_gcode += (
                     "SET_VELOCITY_LIMIT VELOCITY={:.5f} \
                         SQUARE_CORNER_VELOCITY={:.5f}\n"
@@ -139,9 +143,6 @@ class FirmwareRetraction:
 
                 if self.z_hop_style == 'helix':
                     # --> ADD CODE HERE TO GET NEXT COORD TO CALC HELIX CENTER
-                    
-                    
-                    
                     retract_gcode += (
                         "G17\n" # Set XY plane for full arc (incl z for a helix)
                         "G2 Z{:.5f} I-1.22 J0.0 F{}\n"
@@ -211,6 +212,8 @@ class FirmwareRetraction:
                 if self.z_hop_height > 0.0 and self.ramp_move:
                     self.ramp_move = False  # Reset ramp flag if not used before
                 elif self.z_hop_height > 0.0:
+                    # Set maximum unretract z move to 0.0 coordinate
+                    self._set_safe_zhop_unretract_params()
                     unretract_gcode += (
                         "SET_VELOCITY_LIMIT VELOCITY={:.5f} \
                             SQUARE_CORNER_VELOCITY={:.5f}\n"       # Set max vel
@@ -444,17 +447,30 @@ class FirmwareRetraction:
             self.toolhead.square_corner_velocity]
 
     ### Helper to evaluate max. possible zhop height to stay within build volume
-    def _set_safe_zhop_params(self):
-        self.currentPos = self._get_gcode_pos()
-        self.currentZ = self.currentPos[2]
-        # Set safe z_hop height to prevent out-of-range moves.
-        # Variables is used in zhop-G1 command
-        if self.currentZ + self.z_hop_height > self.max_z:
-            self.safe_z_hop_height = self.max_z - self.currentZ
-        else:
-            self.safe_z_hop_height = self.z_hop_height
+    def _set_safe_zhop_retract_params(self):
+        self.safe_z_hop_height = self.z_hop_height
+
+        # Check z move - only for cartesians
+        if self.z_coord_check:
+            self.currentPos = self._get_gcode_pos()
+            self.currentZ = self.currentPos[2]
+            # Set safe z_hop height to prevent out-of-range moves.
+            # Variables is used in zhop-G1 command
+            if self.currentZ + self.z_hop_height > self.max_z:
+                self.safe_z_hop_height = self.max_z - self.currentZ
 
         self.z_hop_Z = self.currentZ + self.safe_z_hop_height
+
+    ####### Helper to evaluate max. possible zhop height to prevent nozzle crash
+    def _set_safe_zhop_unretract_params(self):
+        self.safe_z_hop_height = self.z_hop_height
+
+        self.currentPos = self._get_gcode_pos()
+        self.currentZ = self.currentPos[2]
+        # Set safe z_hop height to prevent nozzle crashes
+        # Variables is used in G11 command
+        if self.currentZ - self.z_hop_height > 0.0:
+            self.safe_z_hop_height = -1.0 * self.currentZ
 
     ############# Helper to evaluate safe helix move to stay within build volume
     def _set_safe_helix_params(self):
