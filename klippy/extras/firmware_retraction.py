@@ -34,6 +34,7 @@ class FirmwareRetraction:
         self.is_retracted = False                           # Retract state flag
         self.ramp_move = False                                  # Ramp move flag
         self.vsdcard_paused = False                         # VSDCard pause flag
+        self.G1_toggle_state = False                      # G1 toggle state flag
         self.stored_set_retraction_gcmds = []  # List for delayed SET_RETRACTION
         self.acc_vel_state = []                # List for accel and vel settings
 
@@ -168,6 +169,7 @@ class FirmwareRetraction:
                 # Swap original G1 handlers if z_hop enabled to offset following
                 # moves in eiter absolute or relative mode
                 self._unregister_G1()
+                self.G1_toggle_state = True #Prevent repeat unregister with flag
         else:
             if self.verbose: gcmd.respond_info('Printer is already in retract \
                 state. Command ignored!')
@@ -189,6 +191,7 @@ class FirmwareRetraction:
             else:
                 if self.z_hop_height > 0.0:    # Restore G1 handlers if z_hop on
                     self._re_register_G1()
+                    self.G1_toggle_state = False    # Prevent repeat re-register
 
                 self._save_acc_vel_state()         # Save accel and vel settings
                 unretract_gcode = (
@@ -453,10 +456,14 @@ class FirmwareRetraction:
 
     ############################################ Register new G1 command handler
     def _unregister_G1(self):
-        self._toggle_gcode_comms('G1.20140114', 'G1', self._G1_zhop, \
-            'G1 command that accounts for z hop when retracted', False)
-        self._toggle_gcode_comms('G0.20140114', 'G0', self._G1_zhop, \
-            'G0 command that accounts for z hop when retracted', False)
+        # Change handler only if G1 command has not been toggled before
+        if self.G1_toggle_state == False:
+            self._toggle_gcode_comms('G1.20140114', 'G1', self._G1_zhop, \
+                'G1 command that accounts for z hop when retracted', \
+                self.G1_toggle_state)
+            self._toggle_gcode_comms('G0.20140114', 'G0', self._G1_zhop, \
+                'G0 command that accounts for z hop when retracted', \
+                self.G1_toggle_state)
 
     ##################### Helper to toggle/untoggle command handlers and methods
     def _toggle_gcode_comms(self, new_cmd_name, old_cmd_name, new_cmd_func, \
@@ -521,8 +528,12 @@ class FirmwareRetraction:
 
     ######################################### Re-register old G1 command handler
     def _re_register_G1(self):
-        self._toggle_gcode_comms('G1', 'G1.20140114', None, 'cmd_G1_help', True)
-        self._toggle_gcode_comms('G0', 'G0.20140114', None, 'cmd_G1_help', True)
+        # Change handler only if G1 command has been toggled before
+        if self.G1_toggle_state == True:
+            self._toggle_gcode_comms('G1', 'G1.20140114', None, 'cmd_G1_help', \
+                                    self.G1_toggle_state)
+            self._toggle_gcode_comms('G0', 'G0.20140114', None, 'cmd_G1_help', \
+                                    self.G1_toggle_state)
 
     ################## Helper method to return the current retraction parameters
     def get_status(self, eventtime):
