@@ -28,8 +28,6 @@ class FirmwareRetraction:
         self.unretract_length = (self.retract_length + \
             self.unretract_extra_length)
         self.currentPos = []
-        self.currentX = 0.0
-        self.currentY = 0.0
         self.currentZ = 0.0
         self.z_hop_Z = 0.0                           # Z coordinate of zhop move
         self.safe_z_hop_height = self.z_hop_height #Zhop preventing out-of-range
@@ -470,18 +468,12 @@ class FirmwareRetraction:
         if self.currentZ - self.safe_z_hop_height < 0.0:
             self.safe_z_hop_height = -1.0 * self.currentZ
 
-    ############# Helper to evaluate safe helix move to stay within build volume
-    def _set_safe_helix_params(self):
-        self.currentPos = self._get_gcode_pos()
-        self.currentX = self.currentPos[0]
-        self.currentY = self.currentPos[1]
-
     ####################################### Helper to get current gcode position
     def _get_gcode_pos(self):
         # Get current gcode position for z_hop move if enabled
         gcodestatus = self.gcode_move.get_status()
         currentPos = gcodestatus['gcode_position']
-        return currentPos#[2]
+        return currentPos
 
     ############################################ Register new G1 command handler
     def _unregister_G1(self):
