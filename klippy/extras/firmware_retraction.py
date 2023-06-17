@@ -419,6 +419,7 @@ class FirmwareRetraction:
             # Note that disabling zhop while retracted id not possible as the
             # SET_RETRACTION command will not execute while retracted.
             self._re_register_G1()
+            self.G1_toggle_state = False            # Prevent repeat re-register
         self.is_retracted = False     # Reset retract flag to enable G10 command
         self.ramp_move = False                            # Reset ramp move flag
         self.stored_set_retraction_gcmds = []       # Reset list of stored comms
