@@ -141,10 +141,24 @@ class FirmwareRetraction:
 
                 if self.z_hop_style == 'helix':
                     # --> ADD CODE HERE TO GET NEXT COORD TO CALC HELIX CENTER
+                    current_position = self.toolhead.get_position()
+                    
+                    # default: X negative
+                    i_pos = -1.22
+                    j_pos = 0
+                    # X close to bed edge: X positive
+                    if current_position[0] < 2:
+                        i_pos = 1.22
+                        j_pos = 0
+                    # Y close to bed edge: Y positive
+                    if current_position[1] < 2:
+                        i_pos = 0
+                        j_pos = 1.22
+                    
                     retract_gcode += (
                         "G17\n" # Set XY plane for full arc (incl z for a helix)
-                        "G2 Z{:.5f} I-1.22 J0.0 F{}\n"
-                    ).format(self.z_hop_Z, int(RETRACTION_MOVE_SPEED_FRACTION *\
+                        "G2 Z{:.5f} I{} J{} F{}\n"
+                    ).format(self.z_hop_Z, i_pos, j_pos, int(RETRACTION_MOVE_SPEED_FRACTION *\
                         self.max_vel * 60))      # Set 80% of max. vel for zhop.
                                 # Z speed limit will be enforced by the firmware
                 # Standard vertical move with enabled z_hop_height
