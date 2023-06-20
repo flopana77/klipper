@@ -144,16 +144,16 @@ class FirmwareRetraction:
                     current_position = self.toolhead.get_position()
                     
                     # default: X negative
-                    i_pos = -1.22
+                    i_pos = -self.helix_diameter
                     j_pos = 0
                     # X close to bed edge: X positive
                     if current_position[0] < 2:
-                        i_pos = 1.22
+                        i_pos = self.helix_diameter
                         j_pos = 0
                     # Y close to bed edge: Y positive
                     if current_position[1] < 2:
                         i_pos = 0
-                        j_pos = 1.22
+                        j_pos = self.helix_diameter
                     
                     retract_gcode += (
                         "G17\n" # Set XY plane for full arc (incl z for a helix)
@@ -276,6 +276,8 @@ class FirmwareRetraction:
             'z_hop_height', 0., minval=0.)
         self.z_hop_style = self.config_ref.get(\
             'z_hop_style', default='standard').strip().lower()
+        self.helix_diameter = self.config_ref.getfloat(\
+            'helix_diameter', 1.22, minval=0.2)
         self._check_z_hop_style()   # Safe guard that zhop style is properly set
         # verbose to enable/disable user messages
         self.verbose = self.config_ref.getboolean('verbose', False)
@@ -422,6 +424,8 @@ class FirmwareRetraction:
             minval=0.)      # z_hop_height with 0mm min. to prevent nozzle crash
         self.z_hop_style = gcmd.get('Z_HOP_STYLE', \
             self.z_hop_style).strip().lower()
+        self.helix_diameter = gcmd.get_float('HELIX_DIAMETER', \
+            self.helix_diameter, minval=0.2)
         self._check_z_hop_style()
         self.unretract_length = (self.retract_length + \
             self.unretract_extra_length)
@@ -580,6 +584,7 @@ class FirmwareRetraction:
             'z_hop_height': self.z_hop_height,
             'safe_z_hop_height': self.safe_z_hop_height,
             'z_hop_style': self.z_hop_style,
+            'helix_diameter': self.helix_diameter,
             'unretract_length': self.unretract_length,
             'retract_state': self.is_retracted
         }
