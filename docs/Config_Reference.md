@@ -1535,12 +1535,12 @@ allowing per-filament settings and runtime tuning.
 #z_hop_style: standard
 #   The type of lifting movement of the nozzle if zhop moves are
 #   enabled. Supported move types are standard, helix and ramp.
-#   'Standard' corresponds to a simple vertical lift movement. 'Helix'
+#   'standard' corresponds to a simple vertical lift movement. 'helix'
 #   combines the vertical lift movement with a circular movement of
 #   the nozzle. This increases the effective move length during nozzle
 #   lifting and therefore produces thinner strings that break faster. It
 #   may therefore be beneficial for oozy filaments and is the standard
-#   setting in BambuStudio. 'Ramp' does not immediately cause the
+#   setting in BambuStudio. 'ramp' does not immediately cause the
 #   nozzle to lift vertically upon retraction but instead adds the
 #   corresponding vertical movement component to the travel move
 #   following the retraction. This reduces overall travel distance and
