@@ -479,7 +479,7 @@ The following additional commands are available.
 #### SET_RETRACTION
 `SET_RETRACTION [RETRACT_LENGTH=<mm>] [RETRACT_SPEED=<mm/s>]
 [UNRETRACT_EXTRA_LENGTH=<mm>] [UNRETRACT_SPEED=<mm/s>] [Z_HOP_HEIGHT=<mm>]
-[Z_HOP_STYLE=<STANDARD,HELIX,RAMP>]`:
+[Z_HOP_STYLE=<STANDARD,HELIX,RAMP>] [HELIX_DIAMETER=<mm>]`:
 Adjust the parameters used by firmware retraction.
 RETRACT_LENGTH determines the length of filament to retract (the minimum
 as well as standard value is 0 mm).
@@ -505,11 +505,14 @@ filament retraction move. Helix provides more effective move length during
 nozzle lifting and therefore thinner strings that break faster. It may therefore
 be beneficial for oozy filaments and is the standard setting in BambuStudio.
 Ramp style allows reducing the total retract-travel-unretract motion system move
-length and may have print time reduction benefits. SET_RETRACTION is commonly
-set as part of slicer per-filament configuration, as different filaments require
-different parameter settings. The command can be issued at runtime. If the
-printer is retracted while the command is issued, the command will be queued and
-executed directly after unretraction using the G11 command.
+length and may have print time reduction benefits. HELIX_DIAMETER can be used
+to increase or decrease the distance needed to break the strings.
+SET_RETRACTION is commonly set as part of slicer per-filament configuration,
+as different filaments require different parameter settings. The command
+can be issued at runtime. If the printer is retracted while the command
+is issued, the command will be queued and executed directly after unretraction
+using the G11 command.
+
 
 #### CLEAR_RETRACTION
 `CLEAR_RETRACTION`: Clears the current retract state without extruder or
