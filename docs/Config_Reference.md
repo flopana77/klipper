@@ -1545,6 +1545,10 @@ allowing per-filament settings and runtime tuning.
 #   corresponding vertical movement component to the travel move
 #   following the retraction. This reduces overall travel distance and
 #   may reduce print time slightly. The default value is 'standard'.
+#helix_diameter: 1.22
+#   The diameter of 'helix' z-hop. This featrue can be used to increase
+#   or decrease the distance needed to break the strings.
+#   The default value is 1.22mm.
 #verbose: False
 #   This enables (True) or disables (False) user messages, which may
 #   be used for debugging when using firmware retraction in macros.
