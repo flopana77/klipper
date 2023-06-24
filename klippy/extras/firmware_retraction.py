@@ -30,6 +30,8 @@ class FirmwareRetraction:
         self.currentPos = []
         self.currentZ = 0.0
         self.z_hop_Z = 0.0                           # Z coordinate of zhop move
+        self.i_offset = self.safe_i_offset = -1.22    # X offset of helix center
+        self.j_offset = self.safe_j_offset = 0.0      # Y Offset of helix center
         self.safe_z_hop_height = self.z_hop_height #Zhop preventing out-of-range
 
         self.is_retracted = False                           # Retract state flag
@@ -140,12 +142,14 @@ class FirmwareRetraction:
                     ).format(self.max_vel, self.max_sqv)     # Set max vel limit
 
                 if self.z_hop_style == 'helix':
-                    # --> ADD CODE HERE TO GET NEXT COORD TO CALC HELIX CENTER
+                    self._set_helix_center_params()
                     retract_gcode += (
                         "G17\n" # Set XY plane for full arc (incl z for a helix)
-                        "G2 Z{:.5f} I-1.22 J0.0 F{}\n"
-                    ).format(self.z_hop_Z, int(RETRACTION_MOVE_SPEED_FRACTION *\
-                        self.max_vel * 60))      # Set 80% of max. vel for zhop.
+                        "G2 Z{:.5f} I{:.5f} J{:.5f} F{}\n"
+                    ).format(self.z_hop_Z, self.safe_i_offset, \
+                            self.safe_j_offset, \
+                            int(RETRACTION_MOVE_SPEED_FRACTION * self.max_vel *\
+                                60))             # Set 80% of max. vel for zhop.
                                 # Z speed limit will be enforced by the firmware
                 # Standard vertical move with enabled z_hop_height
                 elif self.z_hop_style == 'standard':
@@ -443,6 +447,13 @@ class FirmwareRetraction:
             self.toolhead.max_accel,
             self.toolhead.max_accel_to_decel,
             self.toolhead.square_corner_velocity]
+
+    ### Helper to calculate optimum helix center and safe radius in build volume
+    def _set_helix_center_params(self):
+        # ADD CENTER CALC CODE HERE
+        # ADD RADIUS CHECK HERE
+        self.safe_i_offset = self.i_offset
+        self.safe_j_offset = self.j_offset
 
     ### Helper to evaluate max. possible zhop height to stay within build volume
     def _set_safe_zhop_retract_params(self):
