@@ -53,15 +53,15 @@ KEY_WIPE_SPEED = ""
 KEY_RET_BEFORE_WIPE = ""
 
 
-class Filament:
+#class Filament:
     ################################################################# Class init
-    def __init__(self, config):
+#    def __init__(self, config):
         # Get References
-        
+
         # Register new commands
-        
-        
-        
+
+
+
 # Functions needed:
 # 1) Chamber, nozzle and bed override function
 # 2) Flow rate, pressure advance and retraction setting function
@@ -69,5 +69,4 @@ class Filament:
 # 4) Fan manipulation function to enforce no cooling, min and max fan dependent
 #    on layertime.
 #
-# Tests to implement:
-# 1)
+# Tests to implement
