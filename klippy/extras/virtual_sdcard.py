@@ -236,7 +236,7 @@ class VirtualSD:
         past_lines = deque(maxlen=65536)
         current_lines = []
         future_lines = []
-        chunk_size = 1024
+        chunk_size = 8192
         error_message = None
 
         while not self.must_pause_work:
