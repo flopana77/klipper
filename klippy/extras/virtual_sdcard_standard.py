@@ -5,9 +5,6 @@
 # This file may be distributed under the terms of the GNU GPLv3 license.
 import os, logging, io
 
-# Add deque for faster past_lines list
-from collections import deque
-
 VALID_GCODE_EXTS = ['gcode', 'g', 'gco']
 
 class VirtualSD:
@@ -230,22 +227,14 @@ class VirtualSD:
             return self.reactor.NEVER
         self.print_stats.note_start()
         gcode_mutex = self.gcode.get_mutex()
-
-        # Add declarations for past, current and future_lines lists
         partial_input = ""
-        past_lines = deque(maxlen=65536)
-        current_lines = []
-        future_lines = []
-        chunk_size = 1024
+        lines = []
         error_message = None
-
         while not self.must_pause_work:
-            # First Run
-            if not current_lines and not future_lines:
-                # Read two consecutive chunks at start-up
-                # First (and also very last) chunk
+            if not lines:
+                # Read more data
                 try:
-                    data = self.current_file.read(chunk_size)
+                    data = self.current_file.read(8192)
                 except:
                     logging.exception("virtual_sdcard read")
                     break
@@ -256,38 +245,23 @@ class VirtualSD:
                     logging.info("Finished SD card print")
                     self.gcode.respond_raw("Done printing file")
                     break
-                current_lines = data.split('\n')
-                partial_input = current_lines.pop()
-                current_lines.reverse()
-                # Second chunk, complete from first chunk and save new
-                # partial_input
-                future_lines, partial_input = self._read_chunk(partial_input, \
-                                                                chunk_size)
+                lines = data.split('\n')
+                lines[0] = partial_input + lines[0]
+                partial_input = lines.pop()
+                lines.reverse()
                 self.reactor.pause(self.reactor.NOW)
                 continue
-
-            # After first run
-            if not current_lines and future_lines:
-                # Swap lists
-                current_lines, future_lines = future_lines, []
-                # Read next chunk
-                future_lines, partial_input = self._read_chunk(partial_input, \
-                                                                chunk_size)
-                self.reactor.pause(self.reactor.NOW)
-                continue
-
             # Pause if any other request is pending in the gcode class
             if gcode_mutex.test():
                 self.reactor.pause(self.reactor.monotonic() + 0.100)
                 continue
             # Dispatch command
             self.cmd_from_sd = True
-            line = current_lines.pop()
+            line = lines.pop()
             next_file_position = self.file_position + len(line) + 1
             self.next_file_position = next_file_position
             try:
                 self.gcode.run_script(line)
-                past_lines.append(line)
             except self.gcode.error as e:
                 error_message = str(e)
                 try:
@@ -308,9 +282,7 @@ class VirtualSD:
                     logging.exception("virtual_sdcard seek")
                     self.work_timer = None
                     return self.reactor.NEVER
-                # Reset all lists (except for past_lines) and start over
-                current_lines = []
-                future_lines = []
+                lines = []
                 partial_input = ""
         logging.info("Exiting SD card print (position %d)", self.file_position)
         self.work_timer = None
@@ -322,19 +294,6 @@ class VirtualSD:
         else:
             self.print_stats.note_complete()
         return self.reactor.NEVER
-
-    def _read_chunk(self, partial_input, chunk_size):
-        # Read mode data
-        data = self.current_file.read(chunk_size)
-        # Check if there is more data available
-        if data:
-            lines = data.split('\n')
-            lines[0] = partial_input + lines[0]
-            partial_input = lines.pop()
-            lines.reverse()
-        else:
-            lines = []
-        return lines, partial_input
 
 def load_config(config):
     return VirtualSD(config)
