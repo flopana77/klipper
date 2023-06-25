@@ -697,6 +697,7 @@ class FirmwareRetraction:
             'z_hop_height': self.z_hop_height,
             'safe_z_hop_height': self.safe_z_hop_height,
             'z_hop_style': self.z_hop_style,
+            'helix_radius': self.helix_radius,
             'unretract_length': self.unretract_length,
             'retract_state': self.is_retracted
         }
