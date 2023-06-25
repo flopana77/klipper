@@ -388,7 +388,7 @@ class FirmwareRetraction:
                     self.vsdcard_paused = False
                 else:
                     # If cancel command triggered pause event, clear retraction.
-                    self._execute_clear_retraction
+                    self._execute_clear_retraction()
 
     ### Helper method to reset pause & VSDCard flags & force evaluate retraction
     # Called if file reset or print cancelled
