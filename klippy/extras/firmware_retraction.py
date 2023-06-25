@@ -501,10 +501,10 @@ class FirmwareRetraction:
             # Initialize distance list and helix center vector library
             distance = []
             helix_center_vectors = {
-                '0': ( 1, 0 ),
-                '1': ( 0, -1 ),
-                '2': ( -1, 0 ),
-                '3': ( 0 , 1 ),
+                '0': ( 1.0 , 0.0 ),
+                '1': ( 0.0 , -1.0 ),
+                '2': ( -1.0 , 0.0 ),
+                '3': ( 0.0 , 1.0 ),
                 }
 
             # Get current x and y positions
@@ -538,8 +538,8 @@ class FirmwareRetraction:
 
             # Set helix center point perdendicular on closest build plate edge
             quadrant_tuple = helix_center_vectors[str(quadrant)]
-            self.i_offset = [ self.helix_radius * quadrant_tuple[0] ]
-            self.j_offset = [ self.helix_radius * quadrant_tuple[1] ]
+            self.i_offset = self.helix_radius * quadrant_tuple[0]
+            self.j_offset = self.helix_radius * quadrant_tuple[1]
 
             # Set flag to determine the helix rotation direction. If right from
             # the middle of the build plate, rotation is clockwise and vice
