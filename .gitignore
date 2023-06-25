@@ -6,3 +6,4 @@ out
 klippy/.version
 klippy/extras/_ToDos
 klippy/extras/tmc.py
+.vscode
