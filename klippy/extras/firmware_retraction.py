@@ -39,6 +39,7 @@ class FirmwareRetraction:
         self.vsdcard_paused = False                         # VSDCard pause flag
         self.G1_toggle_state = False                      # G1 toggle state flag
         self.z_coord_check = False         # Z_hop move check only for cartesian
+        self.printing_from_VSDCard = False #VSDCard flag, enable safe helix&wipe
         self.stored_set_retraction_gcmds = []  # List for delayed SET_RETRACTION
         self.acc_vel_state = []                # List for accel and vel settings
 
@@ -369,9 +370,9 @@ class FirmwareRetraction:
             self.printer.register_event_handler("virtual_sdcard:reset_file", \
                 self._reset_pause_flag)
             self.printer.register_event_handler("print_stats:start_printing", \
-                self._evaluate_retraction)
+                self._set_VSDCard_flag)
             self.printer.register_event_handler("print_stats:complete_printing"\
-                , self._evaluate_retraction)
+                , self._reset_VSDCard_flag)
             self.printer.register_event_handler("print_stats:cancelled_printing\
                 ", self._reset_pause_flag)
             self.printer.register_event_handler("print_stats:paused_printing", \
@@ -387,11 +388,31 @@ class FirmwareRetraction:
                     self.vsdcard_paused = False
                 else:
                     # If cancel command triggered pause event, clear retraction.
-                    self._execute_clear_retraction()
+                    self._execute_clear_retraction
 
-    ########### Helper method to reset pause flags and force evaluate retraction
+    ### Helper method to reset pause & VSDCard flags & force evaluate retraction
+    # Called if file reset or print cancelled
     def _reset_pause_flag(self, *args):
         self.vsdcard_paused = False
+        # Reset VSDCard flag if file reset. This is to ensure that the VSDCard
+        # flag is only set the first time the start_printing event occurs.
+        self.printing_from_VSDCard = False
+        self._evaluate_retraction()
+
+    ##### Helper method to set VSDCard flag at 1st call & evaluate retract state
+    def _set_VSDCard_flag(self, *args):
+        if not self.printing_from_VSDCard:
+            # Set VSDCard flag on first start of work handler in VSDCard module.
+            # The flag is reset only if the file is reset, the print is
+            # cancelled or completed.
+            self.printing_from_VSDCard = True
+        self._evaluate_retraction()
+
+    # Helper method to reset VSDC flag on completion & force evaluate retraction
+    def _reset_VSDCard_flag(self, *args):
+        if self.printing_from_VSDCard:
+            # Reset VSDCard flag on print completion.
+            self.printing_from_VSDCard = False
         self._evaluate_retraction()
 
     ############################################ Helper method to set pause flag
