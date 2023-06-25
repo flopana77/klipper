@@ -9,10 +9,11 @@
 # Copyright (C) 2023  Florian-Patrice Nagel <flopana77@gmail.com>
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
-import logging
+import logging, math
 
 # Constants
 RETRACTION_MOVE_SPEED_FRACTION = 0.8
+SMALLEST_RADIUS = 0.0000000000000001
 
 class FirmwareRetraction:
     ################################################################# Class init
@@ -30,24 +31,40 @@ class FirmwareRetraction:
         self.currentPos = []
         self.currentZ = 0.0
         self.z_hop_Z = 0.0                           # Z coordinate of zhop move
-        self.i_offset = self.safe_i_offset = -1.22    # X offset of helix center
-        self.j_offset = self.safe_j_offset = 0.0      # Y Offset of helix center
         self.safe_z_hop_height = self.z_hop_height #Zhop preventing out-of-range
+        self.helix_radius = (self.safe_z_hop_height / self.helix_slope) / \
+                            (2 * math.pi)         # Compute initial helix radius
+        self.safe_helix_radius = self.helix_radius
+        self.i_offset = 1.0                # Initialize X offset of helix center
+        self.j_offset = 1.0                # Initialize Y Offset of helix center
 
         self.is_retracted = False                           # Retract state flag
         self.ramp_move = False                                  # Ramp move flag
         self.vsdcard_paused = False                         # VSDCard pause flag
         self.G1_toggle_state = False                      # G1 toggle state flag
-        self.z_coord_check = False         # Z_hop move check only for cartesian
+        self.z_coord_check = False #Zhop move check only for dedicated z_stepper
+        self.helix_check = False     # Helix move check only for cartesian style
+        self.clockwise_helix = False              # Helix rotaion direction flag
         self.printing_from_VSDCard = False #VSDCard flag, enable safe helix&wipe
         self.stored_set_retraction_gcmds = []  # List for delayed SET_RETRACTION
         self.acc_vel_state = []                # List for accel and vel settings
 
-        # Limit use of zhop only to cartesians
+        # Limit use of zhop move check only to printer with dedicated z stepper
         if self.config_ref.has_section('stepper_z'):
             zconfig = config.getsection('stepper_z')
             self.max_z = zconfig.getfloat('position_max')
             self.z_coord_check = True
+
+        # Limit use of helix move check only to cartesian style printers
+        if self.config_ref.has_section('stepper_x') and \
+        self.config_ref.has_section('stepper_y'):
+            xconfig = config.getsection('stepper_x')
+            self.min_x = xconfig.getfloat('position_min', 0.)
+            self.max_x = xconfig.getfloat('position_max')
+            yconfig = config.getsection('stepper_y')
+            self.min_y = yconfig.getfloat('position_min', 0.)
+            self.max_y = yconfig.getfloat('position_max')
+            self.helix_check = True
 
         printer_config = config.getsection('printer')
         self.max_vel = printer_config.getfloat('max_velocity')
@@ -148,8 +165,7 @@ class FirmwareRetraction:
                     retract_gcode += (
                         "G17\n" # Set XY plane for full arc (incl z for a helix)
                         "G2 Z{:.5f} I{:.5f} J{:.5f} F{}\n"
-                    ).format(self.z_hop_Z, self.safe_i_offset, \
-                            self.safe_j_offset, \
+                    ).format(self.z_hop_Z, self.i_offset, self.j_offset, \
                             int(RETRACTION_MOVE_SPEED_FRACTION * self.max_vel *\
                                 60))             # Set 80% of max. vel for zhop.
                                 # Z speed limit will be enforced by the firmware
@@ -269,6 +285,9 @@ class FirmwareRetraction:
         self.z_hop_style = self.config_ref.get(\
             'z_hop_style', default='standard').strip().lower()
         self._check_z_hop_style()   # Safe guard that zhop style is properly set
+        # Helix slope to calculate diameter based in zhop height
+        self.helix_slope = self.config_ref.getfloat(\
+            'helix_slope', 0.1667, minval=0.08335)
         # verbose to enable/disable user messages
         self.verbose = self.config_ref.getboolean('verbose', False)
         # Control retraction parameter behaviour when retraction is cleared.
@@ -285,6 +304,7 @@ class FirmwareRetraction:
 
     ######## Helper method to register commands and instantiate required objects
     def _handle_ready(self):
+        # Get references
         self.gcode = self.printer.lookup_object('gcode')
         self.gcode_move = self.printer.lookup_object('gcode_move')
         self.toolhead = self.printer.lookup_object('toolhead')
@@ -472,10 +492,81 @@ class FirmwareRetraction:
 
     ### Helper to calculate optimum helix center and safe radius in build volume
     def _set_helix_center_params(self):
-        # ADD CENTER CALC CODE HERE
-        # ADD RADIUS CHECK HERE
-        self.safe_i_offset = self.i_offset
-        self.safe_j_offset = self.j_offset
+        # Get current gcode position
+        self.currentPos = self._get_gcode_pos()
+        # Calculate helix radius with safe zhop height (determined before)
+        self.helix_radius = (self.safe_z_hop_height / self.helix_slope) / \
+                            (2.0 * math.pi)
+        # For cartesians only:
+        if self.helix_check:
+            # Initialize distance list and helix center vector library
+            distance = []
+            helix_center_vectors = {
+                '0': ( 1, 0 ),
+                '1': ( 0, -1 ),
+                '2': ( -1, 0 ),
+                '3': ( 0 , 1 ),
+                }
+
+            # Get current x and y positions
+            self.currentX = self.currentPos[0]
+            self.currentY = self.currentPos[1]
+
+            # Calculate distance to build plate edges
+            distance[0] = self.currentX - self.min_x
+            distance[1] = self.max_y - self.currentY
+            distance[2] = self.max_x - self.currentX
+            distance[3] = self.currentY - self.min_y
+
+            # Determine closest build plate edge to toolhead:
+            quadrant = distance.index(min(distance))
+
+            # Check if toolheead in exclusion or transition zone. Note, this
+            # safety check is only performed for cartesian style printers. It
+            # fixes a bug in the slicers offering helix zhop, given that this
+            # sanity check is not done there.
+            if distance[quadrant] <= self.helix_radius:
+                # In exclusion zone, set minimal radius to force linear move
+                # despite G2/3 command. The exclusion zone is defined as the
+                # area less than one standard helix radius away from minimum and
+                # maximum coordinates on the x- and y-axis.
+                self.helix_radius = SMALLEST_RADIUS
+            elif distance[quadrant] <= 2.0 * self.helix_radius:
+                # In transition zone, reduce radius to stay within transition
+                # zone and enforce minimal radius for edge cases
+                self.helix_radius = 2.0 * self.helix_radius - distance[quadrant]
+                self.helix_radius = max(self.helix_radius, SMALLEST_RADIUS)
+
+            # Set helix center point perdendicular on closest build plate edge
+            quadrant_tuple = helix_center_vectors[str(quadrant)]
+            self.i_offset = [ self.helix_radius * quadrant_tuple[0] ]
+            self.j_offset = [ self.helix_radius * quadrant_tuple[1] ]
+
+            # Set flag to determine the helix rotation direction. If right from
+            # the middle of the build plate, rotation is clockwise and vice
+            # versa.
+            mid_x = ( self.min_x + self.max_x ) / 2.0
+            if self.currentX >= mid_x:
+                self.clockwise_helix = True
+            else:
+                self.clockwise_helix = False
+        else:
+            # Non-cartesian, no check. Position helix center in 9 o'clock
+            # position. Helix rotation is always counter clockwise, which is the
+            # standard in BambuStudio. Out of range moves can occur, however,
+            # printer safeguards apply in any case!
+            self.safe_helix_radius = self.helix_radius
+            self.i_offset = -self.helix_radius
+            self.j_offset = 0.0
+
+
+        if self.printing_from_VSDCard:
+        # If print is done from virtual SD Card, position helix center to get
+        # smooth movement considering the travel move destination point.
+            dummy = 1
+
+    ########################### Helper to find the travel move destination point
+    #def _find_travel_move_destination(self):
 
     ### Helper to evaluate max. possible zhop height to stay within build volume
     def _set_safe_zhop_retract_params(self):
