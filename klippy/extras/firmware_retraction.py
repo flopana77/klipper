@@ -512,10 +512,10 @@ class FirmwareRetraction:
             self.currentY = self.currentPos[1]
 
             # Calculate distance to build plate edges
-            distance[0] = self.currentX - self.min_x
-            distance[1] = self.max_y - self.currentY
-            distance[2] = self.max_x - self.currentX
-            distance[3] = self.currentY - self.min_y
+            distance.append(self.currentX - self.min_x)
+            distance.append(self.max_y - self.currentY)
+            distance.append(self.max_x - self.currentX)
+            distance.append(self.currentY - self.min_y)
 
             # Determine closest build plate edge to toolhead:
             quadrant = distance.index(min(distance))
