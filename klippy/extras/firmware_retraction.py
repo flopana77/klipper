@@ -80,11 +80,12 @@ class FirmwareRetraction:
         gcmd.respond_info('RETRACT_LENGTH=%.5f RETRACT_SPEED=%.5f '
                           'UNRETRACT_EXTRA_LENGTH=%.5f UNRETRACT_SPEED=%.5f '
                           ' Z_HOP_HEIGHT=%.5f Z_HOP_STYLE=%s '
-                          ' RETRACTED=%s RAMP_MOVE=%s'
+                          ' RETRACTED=%s RAMP_MOVE=%s VSD_FUNCTIONS_ENABLED=%s'
                           % (self.retract_length, self.retract_speed,
                              self.unretract_extra_length, self.unretract_speed,
                              self.z_hop_height, self.z_hop_style,
-                             self.is_retracted, self.ramp_move ))
+                             self.is_retracted, self.ramp_move,
+                             self.printing_from_VSDCard))
 
         if self.stored_set_retraction_gcmds:#List queued SET_RETRACTION commands
             for i, stored_gcmd in reversed(list(enumerate(\
