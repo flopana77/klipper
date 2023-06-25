@@ -9,7 +9,7 @@
 # Copyright (C) 2023  Florian-Patrice Nagel <flopana77@gmail.com>
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
-import logging, math
+import logging
 
 # Constants
 RETRACTION_MOVE_SPEED_FRACTION = 0.8
@@ -32,8 +32,7 @@ class FirmwareRetraction:
         self.currentZ = 0.0
         self.z_hop_Z = 0.0                           # Z coordinate of zhop move
         self.safe_z_hop_height = self.z_hop_height #Zhop preventing out-of-range
-        self.helix_radius = (self.safe_z_hop_height / self.helix_slope) / \
-                            (2 * math.pi)         # Compute initial helix radius
+        self.helix_radius = self.safe_z_hop_height / self.helix_slope
         self.safe_helix_radius = self.helix_radius
         self.i_offset = 1.0                # Initialize X offset of helix center
         self.j_offset = 1.0                # Initialize Y Offset of helix center
@@ -287,7 +286,7 @@ class FirmwareRetraction:
         self._check_z_hop_style()   # Safe guard that zhop style is properly set
         # Helix slope to calculate diameter based in zhop height
         self.helix_slope = self.config_ref.getfloat(\
-            'helix_slope', 0.1667, minval=0.08335)
+            'helix_slope', 0.328, minval=0.082)
         # verbose to enable/disable user messages
         self.verbose = self.config_ref.getboolean('verbose', False)
         # Control retraction parameter behaviour when retraction is cleared.
@@ -495,8 +494,8 @@ class FirmwareRetraction:
         # Get current gcode position
         self.currentPos = self._get_gcode_pos()
         # Calculate helix radius with safe zhop height (determined before)
-        self.helix_radius = (self.safe_z_hop_height / self.helix_slope) / \
-                            (2.0 * math.pi)
+        self.helix_radius = max(self.safe_z_hop_height / self.helix_slope, \
+                                SMALLEST_RADIUS)
         # For cartesians only:
         if self.helix_check:
             # Initialize distance list and helix center vector library
