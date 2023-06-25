@@ -13,7 +13,7 @@ import logging
 
 # Constants
 RETRACTION_MOVE_SPEED_FRACTION = 0.8
-SMALLEST_RADIUS = 0.0000000000000001
+SMALLEST_RADIUS = 0.00001
 
 class FirmwareRetraction:
     ################################################################# Class init
@@ -33,7 +33,6 @@ class FirmwareRetraction:
         self.z_hop_Z = 0.0                           # Z coordinate of zhop move
         self.safe_z_hop_height = self.z_hop_height #Zhop preventing out-of-range
         self.helix_radius = self.safe_z_hop_height / self.helix_slope
-        self.safe_helix_radius = self.helix_radius
         self.i_offset = 1.0                # Initialize X offset of helix center
         self.j_offset = 1.0                # Initialize Y Offset of helix center
 
@@ -161,13 +160,23 @@ class FirmwareRetraction:
 
                 if self.z_hop_style == 'helix':
                     self._set_helix_center_params()
-                    retract_gcode += (
-                        "G17\n" # Set XY plane for full arc (incl z for a helix)
-                        "G2 Z{:.5f} I{:.5f} J{:.5f} F{}\n"
-                    ).format(self.z_hop_Z, self.i_offset, self.j_offset, \
-                            int(RETRACTION_MOVE_SPEED_FRACTION * self.max_vel *\
-                                60))             # Set 80% of max. vel for zhop.
-                                # Z speed limit will be enforced by the firmware
+                    # Build the GCode string for the helix
+                    cmd_str = "G17\n{} Z{:.5f} {}F{}\n"
+                    ij_str = "I{:.5f} J{:.5f} "
+
+                    # Set move command and rotation direction, if applicable
+                    if self.helix_radius == 0.0:
+                        move_cmd = "G1"
+                        ij_params = ""               # No I, J parameters for G1
+                    else:
+                        move_cmd = "G2" if self.clockwise_helix else "G3"
+                        ij_params = ij_str.format(self.i_offset, self.j_offset)
+
+                    retract_gcode += cmd_str.format(move_cmd, self.z_hop_Z, \
+                            ij_params, int(RETRACTION_MOVE_SPEED_FRACTION * \
+                            self.max_vel * 60))  # Set 80% of max. vel for zhop.
+                               # Z speed limit will be enforced by the firmware.
+
                 # Standard vertical move with enabled z_hop_height
                 elif self.z_hop_style == 'standard':
                     retract_gcode += (
@@ -525,11 +534,11 @@ class FirmwareRetraction:
             # fixes a bug in the slicers offering helix zhop, given that this
             # sanity check is not done there.
             if distance[quadrant] <= self.helix_radius:
-                # In exclusion zone, set minimal radius to force linear move
-                # despite G2/3 command. The exclusion zone is defined as the
+                # In exclusion zone, set radius to cero to force linear move
+                # instead of G2/3 command. The exclusion zone is defined as the
                 # area less than one standard helix radius away from minimum and
                 # maximum coordinates on the x- and y-axis.
-                self.helix_radius = SMALLEST_RADIUS
+                self.helix_radius = 0.0
             elif distance[quadrant] <= 2.0 * self.helix_radius:
                 # In transition zone, reduce radius to stay within transition
                 # zone and enforce minimal radius for edge cases
@@ -554,7 +563,6 @@ class FirmwareRetraction:
             # position. Helix rotation is always counter clockwise, which is the
             # standard in BambuStudio. Out of range moves can occur, however,
             # printer safeguards apply in any case!
-            self.safe_helix_radius = self.helix_radius
             self.i_offset = -self.helix_radius
             self.j_offset = 0.0
 
