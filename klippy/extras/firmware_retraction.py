@@ -542,7 +542,7 @@ class FirmwareRetraction:
             elif distance[quadrant] <= 2.0 * self.helix_radius:
                 # In transition zone, reduce radius to stay within transition
                 # zone and enforce minimal radius for edge cases
-                self.helix_radius = 2.0 * self.helix_radius - distance[quadrant]
+                self.helix_radius = distance[quadrant] - self.helix_radius
                 self.helix_radius = max(self.helix_radius, SMALLEST_RADIUS)
 
             # Set helix center point perdendicular on closest build plate edge
