@@ -9,7 +9,7 @@
 # Copyright (C) 2023  Florian-Patrice Nagel <flopana77@gmail.com>
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
-import logging
+import logging, re
 
 # Constants
 RETRACTION_MOVE_SPEED_FRACTION = 0.8
@@ -502,6 +502,9 @@ class FirmwareRetraction:
     def _set_helix_center_params(self):
         # Get current gcode position
         self.currentPos = self._get_gcode_pos()
+        self.currentX = self.currentPos[0]              # Get current x position
+        self.currentY = self.currentPos[1]              # Get current y position
+
         # Calculate helix radius with safe zhop height (determined before)
         self.helix_radius = max(self.safe_z_hop_height / self.helix_slope, \
                                 SMALLEST_RADIUS)
@@ -515,10 +518,6 @@ class FirmwareRetraction:
                 '2': ( -1.0 , 0.0 ),
                 '3': ( 0.0 , 1.0 ),
                 }
-
-            # Get current x and y positions
-            self.currentX = self.currentPos[0]
-            self.currentY = self.currentPos[1]
 
             # Calculate distance to build plate edges
             distance.append(self.currentX - self.min_x)
@@ -568,12 +567,56 @@ class FirmwareRetraction:
 
 
         if self.printing_from_VSDCard:
-        # If print is done from virtual SD Card, position helix center to get
-        # smooth movement considering the travel move destination point.
-            dummy = 1
+            # If print is done from virtual SD Card, position helix center to
+            # get smooth movement considering the travel move destination point.
+            # Get destination coordinates from current_lines list. Loop
+            # backwards until a pure travel move is found. If user disabled
+            # wiping and zhop in the slicer, the travel move should be the next
+            # command to be performed and hence the last item in the list.
+            self.vsdcard.current_lines[-1]
 
-    ########################### Helper to find the travel move destination point
-    #def _find_travel_move_destination(self):
+            # Loop through lines until travel move found. For this, parse gcode,
+            # check if G1 or G0 command without E parameter is there indicating
+            # travel move. If only z direction, continue checking for actual
+            # travel move. If no actual travel move found, layer change.
+            # Exit loop on G11, positive extrusion G1/0 or eof (do not change
+            # helix center in this case).
+
+
+            # If not there check future_lines list.
+
+    ###### Helper to parse gcode lines, simplified from module by Kevin O'Connor
+    def _parse_gcode(self, line):
+        # Initialize vars
+        cpos = 0
+        parts = []
+        numparts = 0
+        cmd = ""
+
+        # Regular expression for gcode arguments
+        args_r = re.compile('([A-Z_]+|[A-Z*/])')
+
+        # Ignore comments and leading/trailing spaces
+        line = line.strip()
+        cpos = line.find(';')
+        if cpos >= 0:
+            line = line[:cpos]
+
+        # Break line into parts and determine command
+        parts = args_r.split(line.upper())
+        numparts = len(parts)
+        if numparts >= 3 and parts[1] != 'N':
+            cmd = parts[1] + parts[2].strip()
+        elif numparts >= 5 and parts[1] == 'N':
+            # Skip line number at start of command
+            cmd = parts[3] + parts[4].strip()
+
+        # Build gcode "params" dictionary
+        params = { parts[i]: parts[i+1].strip()
+               for i in range(1, numparts, 2) }
+
+        return cmd, params
+
 
     ### Helper to evaluate max. possible zhop height to stay within build volume
     def _set_safe_zhop_retract_params(self):
