@@ -247,7 +247,7 @@ class FirmwareRetraction:
                             SQUARE_CORNER_VELOCITY={:.5f}\n"       # Set max vel
                         "G1 Z-{:.5f} F{}\n"
                     ).format(self.max_vel, self.max_sqv, \
-                        self.safe_z_hop_height, \
+                        abs(self.safe_z_hop_height), \
                         int(RETRACTION_MOVE_SPEED_FRACTION * self.max_vel* 60))
                         # If ramp move was used or standard or helix move were
                         # done, un_zhop at 80% of maximum speed (to have a bit
