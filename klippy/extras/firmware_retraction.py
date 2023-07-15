@@ -159,7 +159,13 @@ class FirmwareRetraction:
                     ).format(self.max_vel, self.max_sqv)     # Set max vel limit
 
                 if self.z_hop_style == 'helix':
-                    self._set_helix_center_params()
+
+                    # Commented helix center code out to print on the meantime
+                    #self._set_helix_center_params()
+                    # Setting I and J parameter to fixed value
+                    self.i_offset = -1.22
+                    self.j_offset = 0.00
+
                     # Build the GCode string for the helix
                     cmd_str = "G17\n{} Z{:.5f} {}F{}\n"
                     ij_str = "I{:.5f} J{:.5f} "
