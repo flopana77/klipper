@@ -646,7 +646,7 @@ class FirmwareRetraction:
         # Set safe z_hop height to prevent nozzle crashes
         # Variables is used in G11 command
         if self.currentZ - self.safe_z_hop_height < 0.0:
-            self.safe_z_hop_height = -1.0 * self.currentZ
+            self.safe_z_hop_height = self.currentZ
 
     ####################################### Helper to get current gcode position
     def _get_gcode_pos(self):
