@@ -242,20 +242,22 @@ class FirmwareRetraction:
     ######################### GCode Command G11 to perform filament unretraction
     def cmd_G11(self, gcmd):
         unretract_gcode = ""                            # Reset unretract string
-        unzhop_gcode=""                              # Reset un-zhop move string
+        unzhop_gcode = ""                            # Reset un-zhop move string
 
         if self.retract_length == 0.0:          # Check if FW retraction enabled
             gcmd.respond_info('Retraction length cero. Firmware retraction \
                 disabled. Command ignored!')
         elif self.is_retracted:             # Check if the filament is retracted
-            if self.z_hop_height > 0.0:        # Restore G1 handlers if z_hop on
-                self._re_register_G1()
+            if self.z_hop_height > 0.0:
+                self._re_register_G1()         # Restore G1 handlers if z_hop on
                 self.G1_toggle_state = False        # Prevent repeat re-register
-                # Set zhop gcode move
+                # Set unzhop gcode move
                 unzhop_gcode = (
                         "G1 -Z{:.5f} F{}\n"
                     ).format(self.z_hop_height, \
-                        int(ZHOP_MOVE_SPEED_FRACTION * self.max_vel* 60))
+                        int(ZHOP_MOVE_SPEED_FRACTION * self.max_vel * 60))
+
+                gcmd.respond_info(unzhop_gcode)
 
             unretract_gcode = (
                 "SAVE_GCODE_STATE NAME=_unretract_state\n"
