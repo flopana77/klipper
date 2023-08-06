@@ -60,6 +60,8 @@ class FirmwareRetraction:
                                     desc=self.cmd_SET_RETRACTION_help)
         self.gcode.register_command('GET_RETRACTION', self.cmd_GET_RETRACTION,
                                     desc=self.cmd_GET_RETRACTION_help)
+        self.gcode.register_command('CLEAR_RETRACTION',\
+            self.cmd_CLEAR_RETRACTION, desc=self.cmd_CLEAR_RETRACTION_help)
 
         # Register new G-code commands for firmware retraction/unretraction
         self.gcode.register_command('G10', self.cmd_G10)
