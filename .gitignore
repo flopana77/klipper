@@ -6,4 +6,5 @@ out
 klippy/.version
 klippy/extras/_ToDos
 klippy/extras/tmc.py
+klippy/extras/gcode_shell_command.py
 .vscode
