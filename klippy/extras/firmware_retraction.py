@@ -253,11 +253,9 @@ class FirmwareRetraction:
                 self.G1_toggle_state = False        # Prevent repeat re-register
                 # Set unzhop gcode move
                 unzhop_gcode = (
-                        "G1 -Z{:.5f} F{}\n"
+                        "G1 Z-{:.5f} F{}\n"
                     ).format(self.z_hop_height, \
                         int(ZHOP_MOVE_SPEED_FRACTION * self.max_vel * 60))
-
-                gcmd.respond_info(unzhop_gcode)
 
             unretract_gcode = (
                 "SAVE_GCODE_STATE NAME=_unretract_state\n"
