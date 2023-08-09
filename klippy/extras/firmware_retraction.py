@@ -135,7 +135,7 @@ class FirmwareRetraction:
             if self.verbose: gcmd.respond_info('Extruder temperature too low. \
                 Command ignored!')
         elif self.retract_length == 0.0:        # Check if FW retraction enabled
-            if self.verbose: gcmd.respond_info('Retraction length cero. \
+            if self.verbose: gcmd.respond_info('Retraction length zero. \
                 Firmware retraction disabled. Command ignored!')
         elif not self.is_retracted:  # If filament isn't retracted, build G-Code
             self._save_acc_vel_state()     # Save current accel and vel settings
@@ -219,7 +219,7 @@ class FirmwareRetraction:
     def cmd_G11(self, gcmd):
         unretract_gcode = ""                            # Reset unretract string
         if self.retract_length == 0.0:          # Check if FW retraction enabled
-            if self.verbose: gcmd.respond_info('Retraction length cero. \
+            if self.verbose: gcmd.respond_info('Retraction length zero. \
                 Firmware retraction disabled. Command ignored!')
         elif self.is_retracted:             # Check if the filament is retracted
             # Check if extruder is above min. temperature. If not, don't retract
@@ -539,7 +539,7 @@ class FirmwareRetraction:
             # fixes a bug in the slicers offering helix zhop, given that this
             # sanity check is not done there.
             if distance[quadrant] <= self.helix_radius:
-                # In exclusion zone, set radius to cero to force linear move
+                # In exclusion zone, set radius to zero to force linear move
                 # instead of G2/3 command. The exclusion zone is defined as the
                 # area less than one standard helix radius away from minimum and
                 # maximum coordinates on the x- and y-axis.
